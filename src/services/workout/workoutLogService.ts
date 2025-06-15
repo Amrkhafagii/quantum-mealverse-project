@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutLog } from '@/types/fitness';
 
@@ -108,5 +107,31 @@ export const getWorkoutStats = async (userId: string) => {
       total_duration_minutes: 0,
       most_active_day: 'N/A'
     };
+  }
+};
+
+export const createWorkoutLog = async (userId: string, logData: any) => {
+  try {
+    const logToInsert = {
+      workout_logs_user_id: userId, // Use correct database field name
+      workout_plan_id: logData.workout_plan_id,
+      date: logData.date,
+      duration: logData.duration,
+      calories_burned: logData.calories_burned,
+      notes: logData.notes,
+      completed_exercises: JSON.stringify(logData.completed_exercises)
+    };
+
+    const { data, error } = await supabase
+      .from('workout_logs')
+      .insert(logToInsert)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating workout log:', error);
+    throw error;
   }
 };

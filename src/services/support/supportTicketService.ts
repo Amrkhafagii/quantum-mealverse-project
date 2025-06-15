@@ -247,3 +247,64 @@ class SupportTicketService {
 }
 
 export const supportTicketService = new SupportTicketService();
+
+export const createSupportTicket = async (ticketData: CreateSupportTicketData): Promise<SupportTicket> => {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .insert({
+      support_tickets_user_id: ticketData.user_id, // Use correct database field name
+      subject: ticketData.subject,
+      description: ticketData.description,
+      category: ticketData.category,
+      priority: ticketData.priority,
+      status: 'open'
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Map database fields to interface fields
+  return {
+    ...data,
+    user_id: data.support_tickets_user_id, // Map from database field to expected field
+    // ... keep existing code (other fields)
+  } as SupportTicket;
+};
+
+export const getUserSupportTickets = async (userId: string): Promise<SupportTicket[]> => {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .select('*')
+    .eq('support_tickets_user_id', userId) // Use correct database field name
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Map database fields to interface fields
+  return (data || []).map(item => ({
+    ...item,
+    user_id: item.support_tickets_user_id, // Map from database field to expected field
+    // ... keep existing code (other mappings)
+  })) as SupportTicket[];
+};
+
+export const getSupportTicketById = async (ticketId: string): Promise<SupportTicket | null> => {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .select('*')
+    .eq('id', ticketId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+
+  // Map database fields to interface fields
+  return {
+    ...data,
+    user_id: data.support_tickets_user_id, // Map from database field to expected field
+    // ... keep existing code (other mappings)
+  } as SupportTicket;
+};

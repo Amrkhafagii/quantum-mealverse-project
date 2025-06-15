@@ -127,7 +127,12 @@ export const generateWorkoutRecommendations = async (
     // Save recommendations to database
     if (recommendations.length > 0) {
       const recommendationsToInsert = recommendations.map(rec => ({
-        ...rec,
+        workout_recommendations_user_id: rec.user_id,
+        description: rec.description,
+        type: rec.type,
+        reason: rec.reason,
+        confidence_score: rec.confidence_score,
+        metadata: rec.metadata,
         suggested_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
         applied: false,
@@ -141,7 +146,30 @@ export const generateWorkoutRecommendations = async (
         
       if (error) throw error;
       
-      return data as WorkoutRecommendation[];
+      // Map the data back to WorkoutRecommendation format
+      return (data || []).map(item => ({
+        id: item.id,
+        user_id: item.workout_recommendations_user_id,
+        title: item.description || 'Workout Recommendation',
+        description: item.description,
+        type: item.type,
+        reason: item.reason,
+        confidence_score: item.confidence_score,
+        metadata: item.metadata,
+        suggested_at: item.suggested_at,
+        applied: item.applied,
+        applied_at: item.applied_at,
+        dismissed: item.dismissed,
+        dismissed_at: item.dismissed_at,
+        expires_at: item.expires_at,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        // Legacy compatibility fields with defaults
+        difficulty: 'intermediate' as const,
+        duration_minutes: 45,
+        target_muscle_groups: [],
+        recommended_frequency: 3
+      })) as WorkoutRecommendation[];
     }
     
     return [];
@@ -221,7 +249,30 @@ export const getActiveRecommendations = async (
       
     if (error) throw error;
     
-    return (data as WorkoutRecommendation[]) || [];
+    // Map the data to WorkoutRecommendation format
+    return (data || []).map(item => ({
+      id: item.id,
+      user_id: item.workout_recommendations_user_id,
+      title: item.description || 'Workout Recommendation',
+      description: item.description,
+      type: item.type,
+      reason: item.reason,
+      confidence_score: item.confidence_score,
+      metadata: item.metadata,
+      suggested_at: item.suggested_at,
+      applied: item.applied,
+      applied_at: item.applied_at,
+      dismissed: item.dismissed,
+      dismissed_at: item.dismissed_at,
+      expires_at: item.expires_at,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      // Legacy compatibility fields with defaults
+      difficulty: 'intermediate' as const,
+      duration_minutes: 45,
+      target_muscle_groups: [],
+      recommended_frequency: 3
+    })) as WorkoutRecommendation[];
   } catch (error) {
     console.error('Error fetching active recommendations:', error);
     return [];
