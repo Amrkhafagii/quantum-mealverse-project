@@ -2,6 +2,7 @@
 import React from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { getLayoutClasses } from '@/utils/responsiveUtils';
+import { PlatformContainer } from './PlatformContainer';
 
 // Helper functions for adaptive layout logic
 export const useLayoutHelpers = () => {
@@ -65,8 +66,6 @@ export const MobileLayout: React.FC<{
   containerVariant: string;
   className?: string;
 }> = ({ children, sidebarContent, containerVariant, className }) => {
-  const { PlatformContainer } = require('./PlatformContainer');
-  
   return (
     <PlatformContainer 
       variant={containerVariant} 
@@ -98,8 +97,6 @@ export const SidebarLayout: React.FC<{
   containerVariant, 
   className 
 }) => {
-  const { PlatformContainer } = require('./PlatformContainer');
-  
   return (
     <PlatformContainer 
       variant={containerVariant} 
@@ -136,8 +133,6 @@ export const SplitLayout: React.FC<{
   containerVariant: string;
   className?: string;
 }> = ({ children, containerVariant, className }) => {
-  const { PlatformContainer } = require('./PlatformContainer');
-  
   return (
     <PlatformContainer 
       variant={containerVariant} 
