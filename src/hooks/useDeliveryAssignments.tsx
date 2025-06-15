@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { getActiveDeliveryAssignments, getPastDeliveryAssignments } from '@/services/delivery/deliveryAssignmentService';
@@ -60,7 +59,7 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
     if (!deliveryUserId) return;
     
     try {
-      await pickupDelivery(assignmentId);
+      await pickupDelivery(assignmentId, deliveryUserId);
       toast({
         title: "Order picked up",
         description: "Order marked as picked up from restaurant",
@@ -80,7 +79,7 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
     if (!deliveryUserId) return;
     
     try {
-      await startDeliveryToCustomer(assignmentId);
+      await startDeliveryToCustomer(assignmentId, deliveryUserId);
       toast({
         title: "On the way",
         description: "Order marked as on the way to customer",

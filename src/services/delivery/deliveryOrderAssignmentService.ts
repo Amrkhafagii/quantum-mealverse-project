@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryDistanceCalculationService } from './DeliveryDistanceCalculationService';
 import { DeliveryLocationTrackingService } from './DeliveryLocationTrackingService';
@@ -47,6 +46,49 @@ function isValidStatusTransition(oldStatus: string, newStatus: string): boolean 
   // Allow cancelling from any non-terminal state
   if (['assigned', 'picked_up', 'on_the_way'].includes(oldStatus) && newStatus === 'cancelled') return true;
   return false;
+}
+
+/**
+ * Helper to get a restaurant by id.
+ */
+async function getRestaurantById(restaurantId: string) {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('id, name, address, latitude, longitude')
+    .eq('id', restaurantId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Helper to get customer (delivery address/user) by order id.
+ * We assume "orders" has customer info + optionally order_locations for precise lat/lng.
+ */
+async function getCustomerByOrderId(orderId: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('customer_name:customer_name, delivery_address:delivery_address, id')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+
+  // Try to find latest order location for lat/lng
+  const { data: loc, error: locErr } = await supabase
+    .from('order_locations')
+    .select('latitude, longitude')
+    .eq('order_id', orderId)
+    .order('timestamp', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (locErr) throw new Error(locErr.message);
+
+  return {
+    name: data?.customer_name ?? '',
+    address: data?.delivery_address ?? '',
+    latitude: loc?.latitude,
+    longitude: loc?.longitude
+  };
 }
 
 /** 
@@ -117,38 +159,44 @@ export async function completeDelivery(assignmentId: string, deliveryUserId: str
 
   if (error) throw new Error(`Failed to complete delivery: ${error.message}`);
 
-  // Get orderId from the assignment (not assignmentId)
+  // Get orderId and restaurantId from the assignment
   const orderId = assignment.order_id;
+  const restaurantId = assignment.restaurant_id;
 
-  // Calculate baseAmount using delivery distance (database-driven, no hardcoded value)
-  let baseAmount = 5;
+  // Look up restaurant details
+  const restaurant = restaurantId ? await getRestaurantById(restaurantId) : undefined;
+  // Look up customer details using order id
+  const customer = orderId ? await getCustomerByOrderId(orderId) : undefined;
+
+  // Calculate baseAmount using delivery distance (DB-driven)
+  let baseAmount: number = 5;
   try {
     if (
-      assignment.restaurant &&
-      assignment.customer &&
-      typeof assignment.restaurant.latitude === 'number' &&
-      typeof assignment.restaurant.longitude === 'number' &&
-      typeof assignment.customer.latitude === 'number' &&
-      typeof assignment.customer.longitude === 'number'
+      restaurant &&
+      customer &&
+      typeof restaurant.latitude === 'number' &&
+      typeof restaurant.longitude === 'number' &&
+      typeof customer.latitude === 'number' &&
+      typeof customer.longitude === 'number'
     ) {
       baseAmount = Math.max(
         5,
         Math.round(
           (await DeliveryDistanceCalculationService.calculateDistanceKm(
-            assignment.restaurant.latitude,
-            assignment.restaurant.longitude,
-            assignment.customer.latitude,
-            assignment.customer.longitude
-          )) * 1.2 + 3 // dynamic formula: scale with distance (example: 1.2 per km + base)
+            restaurant.latitude,
+            restaurant.longitude,
+            customer.latitude,
+            customer.longitude
+          )) * 1.2 + 3
         )
       );
     }
   } catch (err) {
-    // Fallback to default if distance calculation fails (should not be a mock, but a real fallback)
-    baseAmount = 5;
+    // No fallback/default, just throw
+    throw err;
   }
 
-  // Record earnings (real DB, not fallback)
+  // Record earnings (real DB)
   await DeliveryEarningsService.recordEarnings({
     deliveryUserId,
     orderId,
