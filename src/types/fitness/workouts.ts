@@ -1,6 +1,8 @@
+
 export interface WorkoutPlan {
   id: string;
-  workout_plans_user_id: string; // Updated to match new naming convention
+  user_id: string; // Standard field name
+  workout_plans_user_id?: string; // Database field name for compatibility
   name: string;
   description?: string;
   difficulty_level?: string;
@@ -15,7 +17,6 @@ export interface WorkoutPlan {
   frequency?: number;
   goal?: string;
   is_active?: boolean;
-  user_id?: string; // For backward compatibility
 }
 
 export interface WorkoutDay {
@@ -59,6 +60,7 @@ export interface ExerciseSet {
   reps: number | string;
   completed: boolean;
   notes?: string;
+  rest_time?: number;
 }
 
 export interface WorkoutSet {
@@ -67,11 +69,13 @@ export interface WorkoutSet {
   reps: number | string;
   completed: boolean;
   notes?: string;
+  rest_time?: number; // Added missing property
 }
 
 export interface WorkoutSchedule {
   id: string;
-  workout_schedules_user_id: string; // Updated to match new naming convention
+  user_id: string; // Standard field name
+  workout_schedules_user_id?: string; // Database field name for compatibility
   workout_plan_id: string;
   scheduled_date: string;
   completed: boolean;
@@ -80,7 +84,8 @@ export interface WorkoutSchedule {
 
 export interface WorkoutHistoryItem {
   id: string;
-  workout_history_user_id: string; // Updated to match new naming convention
+  user_id: string; // Standard field name
+  workout_history_user_id?: string; // Database field name for compatibility
   workout_log_id: string;
   date: string;
   workout_plan_name: string;
@@ -99,7 +104,8 @@ export interface WorkoutRecommendation {
   type: string;
   reason?: string;
   confidence_score?: number;
-  workout_recommendations_user_id: string; // Updated to match new naming convention
+  user_id: string; // Standard field name
+  workout_recommendations_user_id?: string; // Database field name for compatibility
   suggested_at?: string;
   dismissed?: boolean;
   applied?: boolean;
@@ -121,7 +127,8 @@ export interface UserWorkoutStats {
 
 export interface WorkoutLog {
   id?: string;
-  workout_logs_user_id: string; // Updated to match new naming convention
+  user_id: string; // Standard field name
+  workout_logs_user_id?: string; // Database field name for compatibility
   workout_plan_id: string;
   date: string;
   duration: number;
@@ -129,7 +136,6 @@ export interface WorkoutLog {
   notes?: string | null;
   completed_exercises?: CompletedExercise[]; // Made optional for backward compatibility
   // Backward compatibility fields
-  user_id?: string;
   duration_minutes?: number;
   exercises_completed?: any[];
   total_sets?: number;

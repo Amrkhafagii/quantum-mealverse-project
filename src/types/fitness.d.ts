@@ -35,6 +35,7 @@ export interface UserMeasurement {
 export interface WorkoutPlan {
   id: string;
   user_id: string;
+  workout_plans_user_id?: string; // Added for database compatibility
   name: string;
   description?: string;
   goal: string;
@@ -80,6 +81,7 @@ export interface WorkoutSet {
   reps: number | string;
   completed: boolean;
   notes?: string;
+  rest_time?: number; // Added missing property
   exercise_id?: string; // Added for compatibility
   exercise_name?: string; // Added for compatibility
 }
@@ -120,6 +122,9 @@ export interface WorkoutHistoryItem {
   total_exercises: number;
   duration: number;
   calories_burned?: number;
+  // Make it compatible with WorkoutLog
+  workout_plan_id?: string;
+  completed_exercises?: CompletedExercise[];
 }
 
 export interface WorkoutSchedule {
