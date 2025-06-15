@@ -51,6 +51,7 @@ export interface WorkoutDay {
   day_name: string;
   exercises: Exercise[];
   id?: string;
+  workout_plan_id?: string; // Added for compatibility
   name?: string;
   day_number?: number;
   target_muscle_groups?: string[];
@@ -123,8 +124,8 @@ export interface WorkoutHistoryItem {
   duration: number;
   calories_burned?: number;
   // Make it compatible with WorkoutLog
-  workout_plan_id?: string;
-  completed_exercises?: CompletedExercise[];
+  workout_plan_id: string; // Make required for compatibility
+  completed_exercises: CompletedExercise[]; // Make required for compatibility
 }
 
 export interface WorkoutSchedule {

@@ -24,7 +24,24 @@ const FitnessAnalyticsDashboard = () => {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      setWorkoutHistory(data || []);
+      
+      // Map database fields to WorkoutHistoryItem interface
+      const mappedHistory: WorkoutHistoryItem[] = (data || []).map(item => ({
+        id: item.id,
+        user_id: item.workout_history_user_id, // Map database field
+        workout_log_id: item.workout_log_id,
+        date: item.date,
+        workout_plan_name: item.workout_plan_name,
+        workout_day_name: item.workout_day_name,
+        exercises_completed: item.exercises_completed,
+        total_exercises: item.total_exercises,
+        duration: item.duration,
+        calories_burned: item.calories_burned,
+        workout_plan_id: item.workout_plan_id || '', // Provide default for compatibility
+        completed_exercises: item.completed_exercises || [] // Provide default for compatibility
+      }));
+      
+      setWorkoutHistory(mappedHistory);
     } catch (error) {
       console.error('Error fetching workout history:', error);
       setWorkoutHistory([]);

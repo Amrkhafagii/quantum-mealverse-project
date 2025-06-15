@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -6,18 +7,18 @@ import { Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { WorkoutLog, CompletedExercise } from '@/types/fitness';
+import { WorkoutHistoryItem } from '@/types/fitness';
 import WorkoutLogDetails from './WorkoutLogDetails';
 
 interface WorkoutHistoryProps {
   userId?: string;
-  workoutHistory: WorkoutLog[];
+  workoutHistory: WorkoutHistoryItem[];
   isLoading: boolean;
 }
 
 const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId, workoutHistory, isLoading }) => {
   const { user } = useAuth();
-  const [selectedLog, setSelectedLog] = useState<WorkoutLog | null>(null);
+  const [selectedLog, setSelectedLog] = useState<WorkoutHistoryItem | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
 
   useEffect(() => {
@@ -69,7 +70,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId, workoutHistory,
                       <p className="text-sm text-gray-400">Duration: {log.duration} minutes</p>
                     </div>
                     <Badge variant="secondary">
-                      {log.completed_exercises?.length} Exercises
+                      {log.completed_exercises?.length || log.exercises_completed} Exercises
                     </Badge>
                   </div>
                 ))
