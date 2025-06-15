@@ -4,6 +4,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface CreateRestaurantData {
+  name: string;
+  email: string;
+  password: string;
+  description?: string;
+  cuisine_type?: string;
+  address?: string;
+  city?: string;
+  phone?: string;
+}
+
 // Define a local Restaurant type to avoid import cycles and type recursion
 export type Restaurant = {
   id: string;

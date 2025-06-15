@@ -1,8 +1,27 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Restaurant, RestaurantStats, RestaurantHours, RestaurantFilters } from '@/types/restaurant';
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 
 class RestaurantService {
+  async getRestaurant(userId: string): Promise<Restaurant | null> {
+    try {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('restaurants_user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching restaurant by user ID:', error);
+        return null;
+      }
+
+      return data || null;
+    } catch (error) {
+      console.error('Error in getRestaurant:', error);
+      return null;
+    }
+  }
+
   async getRestaurantById(id: string): Promise<Restaurant | null> {
     try {
       const { data, error } = await supabase
@@ -192,14 +211,16 @@ class RestaurantService {
     }
   }
 
-  // Get restaurants within radius using RPC
+  // Get restaurants within radius - using proper RPC call
   static async getRestaurantsWithinRadius(latitude: number, longitude: number, radiusKm: number = 20): Promise<Restaurant[]> {
     try {
-      const { data, error } = await supabase.rpc('get_restaurants_within_radius', {
-        lat: latitude,
-        lng: longitude,
-        radius_km: radiusKm
-      });
+      // Use the correct RPC function call syntax
+      const { data, error } = await supabase
+        .rpc('get_restaurants_within_radius' as any, {
+          lat: latitude,
+          lng: longitude,
+          radius_km: radiusKm
+        });
 
       if (error) {
         console.error('Error fetching restaurants within radius:', error);
@@ -246,11 +267,12 @@ class RestaurantService {
   // Get nearby restaurants
   static async getNearbyRestaurants(latitude: number, longitude: number, radius: number = 10): Promise<Restaurant[]> {
     try {
-      const { data, error } = await supabase.rpc('get_nearby_restaurants', {
-        lat: latitude,
-        lng: longitude,
-        radius_km: radius
-      });
+      const { data, error } = await supabase
+        .rpc('get_nearby_restaurants' as any, {
+          lat: latitude,
+          lng: longitude,
+          radius_km: radius
+        });
 
       if (error) {
         console.error('Error fetching nearby restaurants:', error);
