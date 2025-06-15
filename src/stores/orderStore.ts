@@ -56,7 +56,7 @@ interface OrderState {
   clearStore: () => void;
 }
 
-export const useOrderStore = create<OrderState>()(
+export const useOrderStore = create<OrderState>(
   persist(
     (set, get) => ({
       currentOrder: null,
@@ -68,7 +68,7 @@ export const useOrderStore = create<OrderState>()(
 
       setCurrentOrder: (order) => set({ currentOrder: order }),
 
-      saveDraft: (draft) => set((state: OrderState) => {
+      saveDraft: (draft) => set((state) => {
         const existingIndex = state.orderDrafts.findIndex(d => d.id === draft.id);
         const updatedDraft = { ...draft, updatedAt: new Date().toISOString() };
         
@@ -81,16 +81,16 @@ export const useOrderStore = create<OrderState>()(
         }
       }),
 
-      removeDraft: (draftId) => set((state: OrderState) => ({
+      removeDraft: (draftId) => set((state) => ({
         orderDrafts: state.orderDrafts.filter(d => d.id !== draftId)
       })),
 
       getDraft: (draftId) => {
-        const state = get() as OrderState;
+        const state = get();
         return state.orderDrafts.find(d => d.id === draftId) || null;
       },
 
-      addRecentOrder: (order) => set((state: OrderState) => ({
+      addRecentOrder: (order) => set((state) => ({
         recentOrders: [order, ...state.recentOrders.slice(0, 9)] // Keep last 10
       })),
 
