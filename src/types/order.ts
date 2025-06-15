@@ -1,4 +1,3 @@
-
 export interface Order {
   id?: string;
   customer_id: string; // This should remain as customer_id (UUID)
@@ -35,6 +34,17 @@ export interface Order {
   // New flexible ordering fields from Phase 5
   assignment_source?: string;
   is_mixed_order?: boolean;
+  // New property for order status history
+  statusHistory?: Array<{
+    status: string;
+    created_at: string;
+    restaurant_name?: string;
+    details?: {
+      assignment_source?: string;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  }>;
 }
 
 export interface OrderItem {

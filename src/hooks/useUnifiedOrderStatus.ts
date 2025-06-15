@@ -1,4 +1,3 @@
-
 import { useEffect, useReducer, useCallback } from "react";
 import { unifiedOrderStatusService } from "@/services/orders/unifiedOrderStatusService";
 import { Order } from "@/types/order";
@@ -78,8 +77,11 @@ export function useUnifiedOrderStatus(orderId: string): UseUnifiedOrderStatusRes
     dispatch({ type: "LOADING_START", variant: "initial" });
     try {
       const order = await unifiedOrderStatusService.getOrderStatusWithTracking(orderId);
-      if (!order) throw new Error("Order not found");
-      dispatch({ type: "SET_DATA", payload: order });
+      // Enforce all required fields for Order type
+      if (!order || !order.customer_id || !order.customer_name || !order.customer_email || !order.customer_phone || !order.delivery_address || !order.city || !order.delivery_method || !order.payment_method || order.delivery_fee === undefined || order.subtotal === undefined || order.total === undefined || !order.status) {
+        throw new Error("Order not found or incomplete order data");
+      }
+      dispatch({ type: "SET_DATA", payload: order as Order });
     } catch (err) {
       dispatch({ type: "SET_ERROR", payload: handleHookError(err) });
     } finally {
@@ -93,11 +95,12 @@ export function useUnifiedOrderStatus(orderId: string): UseUnifiedOrderStatusRes
 
     // Real-time updates subscription
     if (!orderId) return;
-    const unsubscribe = unifiedOrderStatusService.subscribeToOrderStatus(orderId, (order) => {
+    // FIX: proper service instance/object used here
+    const unsubscribe = unifiedOrderStatusService.subscribeToOrderStatus(orderId, (order: Order) => {
       if (order) {
         dispatch({ type: "SET_DATA", payload: order });
       }
-    }, (error) => {
+    }, (error: unknown) => {
       dispatch({ type: "SET_ERROR", payload: handleHookError(error) });
     });
 
