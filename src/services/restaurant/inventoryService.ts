@@ -15,7 +15,7 @@ export interface InventoryItem {
 export const inventoryService = {
   async getInventory(restaurantId: string): Promise<InventoryItem[]> {
     const { data, error } = await supabase
-      .from("restaurant_inventory")
+      .from<any>("restaurant_inventory")
       .select("*")
       .eq("restaurant_id", restaurantId)
       .eq("is_active", true)
@@ -25,9 +25,8 @@ export const inventoryService = {
   },
 
   async updateStock(itemId: string, delta: number): Promise<InventoryItem> {
-    // Get the latest item for atomic operation
     const { data: itemData, error: getError } = await supabase
-      .from("restaurant_inventory")
+      .from<any>("restaurant_inventory")
       .select("*")
       .eq("id", itemId)
       .maybeSingle();
@@ -35,7 +34,7 @@ export const inventoryService = {
 
     const newStock = (itemData.current_stock ?? 0) + delta;
     const { data, error } = await supabase
-      .from("restaurant_inventory")
+      .from<any>("restaurant_inventory")
       .update({ current_stock: newStock })
       .eq("id", itemId)
       .select()
@@ -46,7 +45,7 @@ export const inventoryService = {
 
   async setStock(itemId: string, newCount: number): Promise<InventoryItem> {
     const { data, error } = await supabase
-      .from("restaurant_inventory")
+      .from<any>("restaurant_inventory")
       .update({ current_stock: newCount })
       .eq("id", itemId)
       .select()
@@ -57,12 +56,12 @@ export const inventoryService = {
 
   async toggleActive(itemId: string, isActive: boolean): Promise<InventoryItem> {
     const { data, error } = await supabase
-      .from("restaurant_inventory")
+      .from<any>("restaurant_inventory")
       .update({ is_active: isActive })
       .eq("id", itemId)
       .select()
       .single();
     if (error) throw error;
     return data as InventoryItem;
-  }
+  },
 };
