@@ -14,7 +14,6 @@ export async function requestLocationPermission(): Promise<'granted' | 'denied' 
   if (isNativePlatform()) {
     try {
       const perm = await Geolocation.requestPermissions();
-      // On iOS/Android, check location result
       if (perm.location === 'granted' || perm.coarseLocation === 'granted') {
         return 'granted';
       }
@@ -25,8 +24,20 @@ export async function requestLocationPermission(): Promise<'granted' | 'denied' 
     } catch (e) {
       return 'denied';
     }
+  } else if ('permissions' in navigator) {
+    // Use Permissions API for accurate permission state (do not trigger a geolocation request)
+    try {
+      const result = await (navigator as any).permissions.query({ name: "geolocation" });
+      if (result.state === "granted") return "granted";
+      if (result.state === "prompt") return "prompt";
+      if (result.state === "denied") return "denied";
+      return "prompt";
+    } catch {
+      // Fallback to previous method if Permissions API is not available
+      return "prompt";
+    }
   } else {
-    // Web: try to request geolocation
+    // As a last resort, try to invoke getCurrentPosition to force permission prompt
     try {
       return await new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(

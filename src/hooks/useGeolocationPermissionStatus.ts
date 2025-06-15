@@ -1,7 +1,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-// Possible states from the Permissions API
 type GeoPermissionState = "granted" | "prompt" | "denied" | "unknown";
 
 export function useGeolocationPermissionStatus() {
@@ -17,7 +16,6 @@ export function useGeolocationPermissionStatus() {
         .query({ name: "geolocation" as PermissionName })
         .then((permStatus) => {
           setStatus(permStatus.state as GeoPermissionState);
-          // Listen for permission changes
           permStatus.onchange = () => {
             setStatus(permStatus.state as GeoPermissionState);
           };

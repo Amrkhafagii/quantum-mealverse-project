@@ -1,6 +1,6 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { getUnifiedCurrentLocation, requestLocationPermission } from '@/utils/unifiedGeolocation';
+import { useGeolocationPermissionStatus } from "./useGeolocationPermissionStatus";
 
 export interface SimpleLocation {
   latitude: number;
@@ -25,17 +25,18 @@ export const useSimpleLocation = () => {
     permissionStatus: 'unknown',
     hasRequestedPermission: false
   });
+  const { permissionStatus, refreshPermission } = useGeolocationPermissionStatus();
 
   const getCurrentLocation = useCallback(async (): Promise<SimpleLocation | null> => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const permission = await requestLocationPermission();
-      if (permission !== 'granted') {
+      // Use the improved permission check
+      if (permissionStatus !== 'granted') {
         setState((prev) => ({
           ...prev,
           isLoading: false,
           error: 'Location permission not granted',
-          permissionStatus: permission
+          permissionStatus: permissionStatus
         }));
         return null;
       }
@@ -57,21 +58,23 @@ export const useSimpleLocation = () => {
       localStorage.setItem('lastKnownLocation', JSON.stringify(loc));
       return loc;
     } catch (e: any) {
+      // Only mark as "denied" if the permissionState is denied
       setState((prev) => ({
         ...prev,
         isLoading: false,
         error: e?.message || 'Unable to access your location',
-        permissionStatus: 'denied'
+        permissionStatus: permissionStatus
       }));
       return null;
     }
-  }, []);
+  }, [permissionStatus]);
 
   const requestLocation = useCallback(async (): Promise<boolean> => {
     setState((prev) => ({ ...prev, hasRequestedPermission: true }));
+    await refreshPermission();
     const loc = await getCurrentLocation();
     return loc !== null;
-  }, [getCurrentLocation]);
+  }, [getCurrentLocation, refreshPermission]);
 
   useEffect(() => {
     const cachedLocation = localStorage.getItem('lastKnownLocation');
@@ -90,7 +93,8 @@ export const useSimpleLocation = () => {
         localStorage.removeItem('lastKnownLocation');
       }
     }
-  }, []);
+    refreshPermission();
+  }, [refreshPermission]);
 
   return {
     ...state,
@@ -99,4 +103,3 @@ export const useSimpleLocation = () => {
     getCurrentLocation
   };
 };
-
