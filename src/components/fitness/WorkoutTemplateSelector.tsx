@@ -4,8 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Clock, Target, TrendingUp } from 'lucide-react';
-import { WorkoutTemplate } from '@/types/fitness/exercises';
 import { supabase } from '@/integrations/supabase/client';
+
+interface WorkoutTemplate {
+  id: string;
+  name: string;
+  description: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  goal: string;
+  duration_weeks: number;
+  frequency: number;
+  workout_days: any[];
+  created_at?: string;
+  updated_at?: string;
+  is_public?: boolean;
+  created_by?: string;
+}
 
 interface WorkoutTemplateSelectorProps {
   onSelectTemplate: (template: WorkoutTemplate) => void;
@@ -34,7 +48,25 @@ export const WorkoutTemplateSelector: React.FC<WorkoutTemplateSelectorProps> = (
 
       if (error) throw error;
       
-      setTemplates(data || []);
+      // Map the data to match our interface
+      const mappedTemplates: WorkoutTemplate[] = (data || []).map((template: any) => ({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        difficulty: template.difficulty as 'beginner' | 'intermediate' | 'advanced',
+        goal: template.goal,
+        duration_weeks: template.duration_weeks,
+        frequency: template.frequency,
+        workout_days: Array.isArray(template.workout_days) 
+          ? template.workout_days 
+          : JSON.parse(template.workout_days as string || '[]'),
+        created_at: template.created_at,
+        updated_at: template.updated_at,
+        is_public: template.is_public,
+        created_by: template.created_by
+      }));
+      
+      setTemplates(mappedTemplates);
     } catch (error) {
       console.error('Error fetching templates:', error);
     } finally {

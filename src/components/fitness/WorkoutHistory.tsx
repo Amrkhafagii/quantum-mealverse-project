@@ -26,14 +26,19 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId, workoutHistory,
   }, [workoutHistory]);
 
   const handleSelectLog = (log: any) => {
-    // Ensure correct type for completed_exercises
+    // Ensure correct type for completed_exercises and add required fields
     const exerciseArr = typeof log.completed_exercises === "string"
       ? JSON.parse(log.completed_exercises)
       : log.completed_exercises;
-    setSelectedLog({
+    
+    const logWithRequiredFields: WorkoutHistoryItem = {
       ...log,
-      completed_exercises: exerciseArr as any[], // Properly set
-    });
+      completed_exercises: exerciseArr as any[],
+      // Add required fields that might be missing
+      workout_plan_id: log.workout_plan_id || log.id || 'unknown'
+    };
+    
+    setSelectedLog(logWithRequiredFields);
   };
 
   if (isLoading) {

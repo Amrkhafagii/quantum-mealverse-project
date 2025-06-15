@@ -161,19 +161,17 @@ export class AchievementService {
           achievement_id: achievementId,
           date_achieved: new Date().toISOString()
         })
-        .select(`
-          *,
-          achievement:achievement_id(*)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
 
       return {
         id: newAchievement.id,
-        user_id: newAchievement.user_achievements_user_id,
+        user_achievements_user_id: newAchievement.user_achievements_user_id,
         achievement_id: newAchievement.achievement_id,
-        date_earned: newAchievement.date_achieved
+        date_achieved: newAchievement.date_achieved,
+        unlocked_at: newAchievement.date_achieved
       };
     } catch (error) {
       console.error('Error awarding achievement:', error);

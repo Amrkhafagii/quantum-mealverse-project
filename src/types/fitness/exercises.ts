@@ -2,13 +2,24 @@
 export interface WorkoutTemplate {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
-  duration_minutes: number;
-  workout_days: import('./workouts').WorkoutDay[];
-  is_public: boolean;
-  created_at: string;
-  updated_at: string;
+  goal: string;
+  duration_weeks: number;
+  frequency: number;
+  workout_days: WorkoutDay[];
+  created_at?: string;
+  updated_at?: string;
+  is_public?: boolean;
+  created_by?: string;
+  // Made duration_minutes optional for backward compatibility
+  duration_minutes?: number;
+}
+
+export interface WorkoutDay {
+  day_name: string;
+  exercises: Exercise[];
+  estimated_duration?: number;
 }
 
 export interface Exercise {
@@ -20,26 +31,10 @@ export interface Exercise {
   sets: number;
   reps: number | string;
   weight?: number;
-  duration?: number;
+  duration?: string | number;
   rest_time?: number;
   rest?: number;
   rest_seconds?: number;
   instructions?: string;
-  description?: string;
-  muscle_groups?: string[];
-  difficulty?: 'beginner' | 'intermediate' | 'advanced';
-  video_url?: string;
-  equipment_needed?: string[];
-}
-
-export interface ExerciseLibraryItem {
-  id: string;
-  name: string;
-  description?: string;
-  muscle_groups: string[];
-  equipment_needed?: string[];
-  difficulty_level: 'beginner' | 'intermediate' | 'advanced';
-  instructions?: string;
-  video_url?: string;
-  image_url?: string;
+  notes?: string;
 }

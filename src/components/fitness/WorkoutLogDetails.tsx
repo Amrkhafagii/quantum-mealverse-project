@@ -1,237 +1,248 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Calendar, Clock, Target, Weight } from 'lucide-react';
+import { WorkoutHistoryItem, CompletedExercise } from '@/types/fitness';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Clock, Dumbbell, TrendingUp, Heart, Star } from 'lucide-react';
-import { WorkoutLog } from '@/types/fitness/workouts';
 
 interface WorkoutLogDetailsProps {
-  log: WorkoutLog;
-  showProgressCharts?: boolean;
+  log: WorkoutHistoryItem;
 }
 
-const WorkoutLogDetails: React.FC<WorkoutLogDetailsProps> = ({ 
-  log, 
-  showProgressCharts = true 
-}) => {
-  const [chartData, setChartData] = useState<any[]>([]);
+const WorkoutLogDetails: React.FC<WorkoutLogDetailsProps> = ({ log }) => {
+  // Helper function to get exercise stats
+  const getExerciseStats = (exercise: CompletedExercise) => {
+    const sets = exercise.sets_completed || [];
+    const totalSets = sets.length;
+    const totalReps = sets.reduce((sum, set) => sum + (typeof set.reps === 'number' ? set.reps : parseInt(set.reps) || 0), 0);
+    const totalWeight = sets.reduce((sum, set) => sum + (set.weight || 0), 0);
+    const maxWeight = Math.max(...sets.map(set => set.weight || 0));
+    
+    return { totalSets, totalReps, totalWeight, maxWeight };
+  };
 
-  useEffect(() => {
-    // Generate sample progress data for visualization
-    if (log.completed_exercises) {
-      const progressData = log.completed_exercises.map((exercise, index) => ({
-        exercise: exercise.name?.substring(0, 10) || `Ex ${index + 1}`,
-        volume: exercise.sets?.reduce((total, set) => 
-          total + ((set.weight || 0) * (set.reps || 0)), 0) || 0,
-        maxWeight: Math.max(...(exercise.sets?.map(set => set.weight || 0) || [0]))
-      }));
-      setChartData(progressData);
-    }
-  }, [log]);
+  // Calculate workout summary
+  const workoutSummary = {
+    totalExercises: log.completed_exercises?.length || log.exercises_completed,
+    totalSets: log.completed_exercises?.reduce((sum, ex) => {
+      const stats = getExerciseStats(ex);
+      return sum + stats.totalSets;
+    }, 0) || 0,
+    totalReps: log.completed_exercises?.reduce((sum, ex) => {
+      const stats = getExerciseStats(ex);
+      return sum + stats.totalReps;
+    }, 0) || 0,
+    totalVolume: log.completed_exercises?.reduce((sum, ex) => {
+      const stats = getExerciseStats(ex);
+      return sum + stats.totalWeight;
+    }, 0) || 0
+  };
 
-  const totalVolume = log.completed_exercises?.reduce((total, exercise) => 
-    total + (exercise.sets?.reduce((setTotal, set) => 
-      setTotal + ((set.weight || 0) * (set.reps || 0)), 0) || 0), 0) || 0;
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
-  const totalSets = log.completed_exercises?.reduce((total, exercise) => 
-    total + (exercise.sets?.length || 0), 0) || 0;
+  // Generate chart data for volume over sets
+  const generateVolumeData = () => {
+    if (!log.completed_exercises) return [];
+    
+    let setNumber = 0;
+    const data: any[] = [];
+    
+    log.completed_exercises.forEach((exercise, exerciseIndex) => {
+      const sets = exercise.sets_completed || [];
+      sets.forEach((set, setIndex) => {
+        setNumber++;
+        const volume = (set.weight || 0) * (typeof set.reps === 'number' ? set.reps : parseInt(set.reps) || 0);
+        data.push({
+          setNumber,
+          volume,
+          exercise: exercise.name || exercise.exercise_name,
+          weight: set.weight || 0,
+          reps: set.reps
+        });
+      });
+    });
+    
+    return data;
+  };
+
+  const volumeData = generateVolumeData();
 
   return (
-    <div className="space-y-6">
-      {/* Header with Key Stats */}
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="text-quantum-cyan">{log.workout_plan_name}</span>
-            <Badge variant="outline" className="bg-quantum-black/20">
-              {new Date(log.date).toLocaleDateString()}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-quantum-cyan" />
-              <div>
-                <p className="text-sm text-gray-400">Duration</p>
-                <p className="font-semibold">{log.duration} min</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Dumbbell className="h-4 w-4 text-quantum-cyan" />
-              <div>
-                <p className="text-sm text-gray-400">Total Sets</p>
-                <p className="font-semibold">{totalSets}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-quantum-cyan" />
-              <div>
-                <p className="text-sm text-gray-400">Volume</p>
-                <p className="font-semibold">{totalVolume.toFixed(0)} lbs</p>
-              </div>
-            </div>
-            
-            {log.calories_burned && (
-              <div className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-red-400" />
-                <div>
-                  <p className="text-sm text-gray-400">Calories</p>
-                  <p className="font-semibold">{log.calories_burned}</p>
-                </div>
-              </div>
-            )}
+    <Card className="bg-quantum-black/30 border-quantum-cyan/20">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-quantum-cyan">Workout Details</CardTitle>
+            <p className="text-sm text-gray-400 mt-1">
+              {formatDate(log.date)}
+            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="exercises" className="w-full">
-        <TabsList className="bg-quantum-darkBlue/50">
-          <TabsTrigger value="exercises">Exercises</TabsTrigger>
-          {showProgressCharts && <TabsTrigger value="charts">Progress</TabsTrigger>}
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="exercises" className="space-y-4">
-          <ScrollArea className="h-[500px] w-full">
-            <div className="space-y-4">
-              {log.completed_exercises?.map((exercise, index) => (
-                <Card key={index} className="bg-quantum-black/30 border-quantum-cyan/10">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      <span>{exercise.name}</span>
-                      {exercise.target_muscle && (
-                        <Badge variant="secondary" className="text-xs">
-                          {exercise.target_muscle}
-                        </Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {exercise.sets?.map((set, setIndex) => (
-                        <div 
-                          key={setIndex} 
-                          className="flex items-center justify-between p-2 bg-quantum-darkBlue/20 rounded"
-                        >
-                          <span className="text-sm font-medium">Set {setIndex + 1}</span>
-                          <div className="flex items-center gap-4 text-sm">
-                            {set.weight && (
-                              <span>{set.weight} lbs</span>
-                            )}
-                            <span>{set.reps} reps</span>
-                            {set.rest_seconds && (
-                              <span className="text-gray-400">{set.rest_seconds}s rest</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {exercise.notes && (
-                      <div className="mt-3 p-2 bg-quantum-darkBlue/10 rounded">
-                        <p className="text-sm text-gray-300">{exercise.notes}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )) || (
-                <div className="text-center py-8 text-gray-400">
-                  No exercise data available
-                </div>
-              )}
+          <Badge variant="secondary">
+            {log.workout_plan_name || 'Custom Workout'}
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        {/* Workout Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Clock className="h-5 w-5 text-quantum-cyan mr-2" />
+              <span className="text-2xl font-bold text-white">{log.duration}</span>
             </div>
-          </ScrollArea>
-        </TabsContent>
+            <p className="text-sm text-gray-400">Minutes</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Target className="h-5 w-5 text-quantum-cyan mr-2" />
+              <span className="text-2xl font-bold text-white">{workoutSummary.totalExercises}</span>
+            </div>
+            <p className="text-sm text-gray-400">Exercises</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Weight className="h-5 w-5 text-quantum-cyan mr-2" />
+              <span className="text-2xl font-bold text-white">{workoutSummary.totalSets}</span>
+            </div>
+            <p className="text-sm text-gray-400">Sets</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Calendar className="h-5 w-5 text-quantum-cyan mr-2" />
+              <span className="text-2xl font-bold text-white">{workoutSummary.totalVolume.toFixed(0)}</span>
+            </div>
+            <p className="text-sm text-gray-400">Total Volume (lbs)</p>
+          </div>
+        </div>
 
-        {showProgressCharts && (
-          <TabsContent value="charts" className="space-y-4">
-            <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-              <CardHeader>
-                <CardTitle>Workout Volume Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                      <XAxis dataKey="exercise" tick={{ fill: '#ccc' }} />
-                      <YAxis tick={{ fill: '#ccc' }} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1a1a2e', 
-                          border: '1px solid #16213e', 
-                          color: '#fff' 
-                        }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="volume" 
-                        stroke="#00FFFF" 
-                        strokeWidth={2}
-                        dot={{ fill: '#00FFFF' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* Volume Chart */}
+        {volumeData.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-white">Volume by Set</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={volumeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis 
+                    dataKey="setNumber" 
+                    stroke="#9CA3AF"
+                    tick={{ fill: '#9CA3AF' }}
+                  />
+                  <YAxis 
+                    stroke="#9CA3AF"
+                    tick={{ fill: '#9CA3AF' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1F2937', 
+                      border: '1px solid #6B7280',
+                      borderRadius: '8px',
+                      color: '#F9FAFB'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="volume" 
+                    stroke="#00D9FF" 
+                    strokeWidth={2}
+                    dot={{ fill: '#00D9FF', strokeWidth: 2, r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         )}
 
-        <TabsContent value="notes" className="space-y-4">
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-yellow-400" />
-                Workout Notes & Insights
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {log.notes ? (
-                  <div className="p-4 bg-quantum-black/30 rounded-lg">
-                    <h4 className="font-medium mb-2">Personal Notes</h4>
-                    <p className="text-gray-300">{log.notes}</p>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-quantum-black/30 rounded-lg text-center text-gray-400">
-                    No notes recorded for this workout
-                  </div>
-                )}
+        {/* Exercise Details */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-white">Exercise Details</h3>
+          <ScrollArea className="h-96">
+            <div className="space-y-4">
+              {log.completed_exercises?.map((exercise, index) => {
+                const stats = getExerciseStats(exercise);
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-quantum-black/30 rounded-lg">
-                    <h4 className="font-medium mb-2">Performance Summary</h4>
-                    <ul className="text-sm space-y-1 text-gray-300">
-                      <li>• Completed {log.completed_exercises?.length || 0} exercises</li>
-                      <li>• Total workout time: {log.duration} minutes</li>
-                      <li>• Average rest between sets: ~60 seconds</li>
-                      {log.calories_burned && <li>• Calories burned: {log.calories_burned}</li>}
-                    </ul>
-                  </div>
-                  
-                  <div className="p-4 bg-quantum-black/30 rounded-lg">
-                    <h4 className="font-medium mb-2">Next Session Focus</h4>
-                    <ul className="text-sm space-y-1 text-gray-300">
-                      <li>• Consider increasing weight by 2.5-5 lbs</li>
-                      <li>• Focus on form over speed</li>
-                      <li>• Maintain consistent rest periods</li>
-                      <li>• Track perceived exertion</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                return (
+                  <Card key={index} className="bg-quantum-darkBlue/30 border-gray-600">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-base text-quantum-cyan">
+                            {exercise.name || exercise.exercise_name}
+                          </CardTitle>
+                          <div className="flex gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {stats.totalSets} sets
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Max: {stats.maxWeight}lbs
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent>
+                      {exercise.sets_completed && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-gray-300">Sets:</h4>
+                          <div className="grid gap-2">
+                            {exercise.sets_completed.map((set, setIndex) => (
+                              <div key={setIndex} className="flex justify-between items-center p-2 bg-black/20 rounded">
+                                <span className="text-sm text-gray-300">
+                                  Set {set.set_number || setIndex + 1}
+                                </span>
+                                <div className="flex gap-4 text-sm">
+                                  <span className="text-white">
+                                    {set.weight || 0}lbs × {set.reps} reps
+                                  </span>
+                                  <span className="text-quantum-cyan">
+                                    {((set.weight || 0) * (typeof set.reps === 'number' ? set.reps : parseInt(set.reps) || 0)).toFixed(0)} vol
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {exercise.notes && (
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium text-gray-300 mb-1">Notes:</h4>
+                          <p className="text-sm text-gray-400">{exercise.notes}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Additional Notes */}
+        {log.calories_burned && (
+          <div className="text-center p-3 bg-quantum-darkBlue/20 rounded-lg">
+            <p className="text-sm text-gray-300">
+              Estimated Calories Burned: <span className="text-quantum-cyan font-semibold">{log.calories_burned}</span>
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
