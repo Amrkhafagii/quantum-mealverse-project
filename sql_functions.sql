@@ -96,3 +96,78 @@ BEGIN
   END LOOP;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Updated generate_order_id function with SECURITY DEFINER to bypass RLS
+CREATE OR REPLACE FUNCTION public.generate_order_id()
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    date_part TEXT;
+    random_part TEXT;
+    sequence_part TEXT;
+    formatted_id TEXT;
+    curr_date DATE := CURRENT_DATE;
+    yr INTEGER := EXTRACT(YEAR FROM curr_date);
+    mo INTEGER := EXTRACT(MONTH FROM curr_date);
+    dy INTEGER := EXTRACT(DAY FROM curr_date);
+    seq INTEGER;
+BEGIN
+    -- Generate date part (YYYYMMDD)
+    date_part := TO_CHAR(curr_date, 'YYYYMMDD');
+    
+    -- Generate random part (4 uppercase letters)
+    random_part := '';
+    FOR i IN 1..2 LOOP
+        random_part := random_part || CHR(65 + floor(random() * 26)::integer);
+    END LOOP;
+    
+    -- Get or create sequence for today
+    INSERT INTO public.order_sequences (year, month, day, sequence)
+    VALUES (yr, mo, dy, 1)
+    ON CONFLICT (year, month, day) 
+    DO UPDATE SET sequence = order_sequences.sequence + 1
+    RETURNING sequence INTO seq;
+    
+    -- Format sequence part (4-digit number)
+    sequence_part := LPAD(seq::TEXT, 4, '0');
+    
+    -- Combine all parts
+    formatted_id := 'ORD-' || date_part || '-' || random_part || '-' || sequence_part;
+    
+    -- Store the generated ID
+    INSERT INTO public.order_id_formats (formatted_id, date_part, random_part, sequence_part)
+    VALUES (formatted_id, date_part, random_part, sequence_part);
+    
+    RETURN formatted_id;
+END;
+$$;
+
+-- Updated generate_ticket_number function with SECURITY DEFINER to bypass RLS
+CREATE OR REPLACE FUNCTION public.generate_ticket_number()
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  date_part TEXT;
+  sequence_part INTEGER;
+BEGIN
+  date_part := TO_CHAR(CURRENT_DATE, 'YYYYMMDD');
+  
+  -- Get next sequence for today
+  INSERT INTO public.order_sequences (year, month, day, sequence)
+  VALUES (
+    EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER,
+    EXTRACT(MONTH FROM CURRENT_DATE)::INTEGER, 
+    EXTRACT(DAY FROM CURRENT_DATE)::INTEGER,
+    1
+  )
+  ON CONFLICT (year, month, day) 
+  DO UPDATE SET sequence = order_sequences.sequence + 1
+  RETURNING sequence INTO sequence_part;
+  
+  RETURN 'TKT-' || date_part || '-' || LPAD(sequence_part::TEXT, 4, '0');
+END;
+$$;
