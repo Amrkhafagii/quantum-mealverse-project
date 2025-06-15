@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Dumbbell, Clock, TrendingUp } from 'lucide-react';
+import { Calendar, Dumbbell, Clock, TrendingUp, ClockIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { WorkoutHistoryItem } from '@/types/fitness';
 import WorkoutLogDetails from './WorkoutLogDetails';
@@ -63,7 +63,7 @@ const ResponsiveWorkoutHistory: React.FC<ResponsiveWorkoutHistoryProps> = ({
         <Card className="bg-quantum-black/30 border-quantum-cyan/20">
           <CardHeader className="pb-3">
             <CardTitle className="text-quantum-cyan flex items-center gap-2">
-              <History className="h-5 w-5" />
+              <ClockIcon className="h-5 w-5" />
               Workout History
             </CardTitle>
           </CardHeader>
@@ -129,7 +129,7 @@ const ResponsiveWorkoutHistory: React.FC<ResponsiveWorkoutHistoryProps> = ({
       <Card className="bg-quantum-black/30 border-quantum-cyan/20">
         <CardHeader>
           <CardTitle className="text-quantum-cyan flex items-center gap-2">
-            <History className="h-5 w-5" />
+            <ClockIcon className="h-5 w-5" />
             Workout History
           </CardTitle>
         </CardHeader>
