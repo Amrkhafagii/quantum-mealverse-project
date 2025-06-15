@@ -41,4 +41,5 @@ export interface Exercise {
   description?: string;
   muscle_groups?: string[];
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  equipment_needed?: string[];
 }

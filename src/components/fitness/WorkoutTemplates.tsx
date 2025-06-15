@@ -4,121 +4,237 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dumbbell, Clock, Target, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Clock, Users, Target, Plus, Star } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkoutTemplates } from '@/hooks/useWorkoutTemplates';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { WorkoutTemplate } from '@/types/fitness/exercises';
 
 const WorkoutTemplates: React.FC = () => {
   const { user } = useAuth();
+  const { templates, isLoading } = useWorkoutTemplates();
   const { toast } = useToast();
-  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
-  const [selectedGoal, setSelectedGoal] = useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = useState<WorkoutTemplate | null>(null);
+  const [creatingFromTemplate, setCreatingFromTemplate] = useState(false);
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  const fetchTemplates = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('workout_templates')
-        .select('*')
-        .eq('is_public', true)
-        .order('difficulty', { ascending: true });
-
-      if (error) throw error;
-
-      // Transform the data to match our WorkoutTemplate interface
-      const typedTemplates: WorkoutTemplate[] = (data || []).map((template: any) => ({
-        id: template.id,
-        name: template.name,
-        description: template.description || '',
-        difficulty: template.difficulty as 'beginner' | 'intermediate' | 'advanced',
-        goal: template.goal || 'general_fitness',
-        duration_weeks: template.duration_weeks || 4,
-        frequency: template.frequency || 3,
-        workout_days: Array.isArray(template.workout_days) 
-          ? template.workout_days 
-          : JSON.parse(template.workout_days as string),
-        created_at: template.created_at,
-        updated_at: template.updated_at,
-        is_public: template.is_public,
-        created_by: template.created_by,
-        duration_minutes: template.duration_minutes
-      }));
-
-      setTemplates(typedTemplates);
-    } catch (error) {
-      console.error('Error fetching workout templates:', error);
+  const handleUseTemplate = async (template: WorkoutTemplate) => {
+    if (!user?.id) {
       toast({
-        title: "Error",
-        description: "Failed to load workout templates",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredTemplates = templates.filter(template => {
-    const matchesDifficulty = selectedDifficulty === '' || template.difficulty === selectedDifficulty;
-    const matchesGoal = selectedGoal === '' || template.goal === selectedGoal;
-    return matchesDifficulty && matchesGoal;
-  });
-
-  const useTemplate = async (template: WorkoutTemplate) => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to use workout templates",
+        title: "Authentication required",
+        description: "You must be logged in to use workout templates.",
         variant: "destructive"
       });
       return;
     }
 
     try {
+      setCreatingFromTemplate(true);
+      
       // Create a new workout plan based on the template
-      const { data: workoutPlan, error: planError } = await supabase
+      const newPlan = {
+        workout_plans_user_id: user.id,
+        name: `${template.name} - Custom`,
+        description: template.description,
+        difficulty: template.difficulty,
+        goal: template.goal || 'General Fitness',
+        duration_weeks: template.duration_weeks || 4,
+        frequency: template.frequency || 3,
+        workout_days: JSON.stringify(template.workout_days),
+        template_id: template.id,
+        is_custom: true
+      };
+
+      const { data, error } = await supabase
         .from('workout_plans')
-        .insert({
-          workout_plans_user_id: user.id,
-          name: template.name,
-          description: template.description,
-          difficulty: template.difficulty,
-          goal: template.goal,
-          duration_weeks: template.duration_weeks,
-          frequency: template.frequency,
-          workout_days: template.workout_days,
-          template_id: template.id
-        })
+        .insert(newPlan)
         .select()
         .single();
 
-      if (planError) throw planError;
+      if (error) throw error;
+
+      // Create workout days for the plan
+      if (template.workout_days && template.workout_days.length > 0) {
+        const workoutDaysInserts = template.workout_days.map((day, index) => ({
+          workout_plan_id: data.id,
+          day_name: day.day_name,
+          day_number: index + 1,
+          exercises: JSON.stringify(day.exercises)
+        }));
+
+        const { error: daysError } = await supabase
+          .from('workout_days')
+          .insert(workoutDaysInserts);
+
+        if (daysError) {
+          console.error('Error creating workout days:', daysError);
+        }
+      }
 
       toast({
         title: "Template Applied!",
-        description: `${template.name} has been added to your workout plans`,
+        description: `Created a new workout plan based on "${template.name}"`,
       });
 
+      setSelectedTemplate(null);
     } catch (error) {
-      console.error('Error applying template:', error);
+      console.error('Error using template:', error);
       toast({
         title: "Error",
-        description: "Failed to apply workout template",
+        description: "Failed to create workout plan from template. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setCreatingFromTemplate(false);
     }
   };
 
-  if (loading) {
+  const TemplateCard = ({ template }: { template: WorkoutTemplate }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="bg-quantum-black/30 border-quantum-cyan/10 hover:border-quantum-cyan/30 transition-all cursor-pointer h-full">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-lg text-white">{template.name}</CardTitle>
+            <Badge variant="outline" className="bg-quantum-purple/20 text-quantum-purple capitalize">
+              {template.difficulty}
+            </Badge>
+          </div>
+          <p className="text-sm text-gray-400 line-clamp-2">{template.description}</p>
+        </CardHeader>
+        
+        <CardContent>
+          <div className="grid grid-cols-3 gap-2 mb-4 text-center text-sm">
+            <div className="bg-quantum-black/40 p-2 rounded">
+              <Clock className="h-4 w-4 mx-auto mb-1 text-quantum-cyan" />
+              <div className="text-xs text-gray-500">Duration</div>
+              <div>{template.duration_weeks || 4}wks</div>
+            </div>
+            <div className="bg-quantum-black/40 p-2 rounded">
+              <Users className="h-4 w-4 mx-auto mb-1 text-quantum-cyan" />
+              <div className="text-xs text-gray-500">Frequency</div>
+              <div>{template.frequency || 3}/week</div>
+            </div>
+            <div className="bg-quantum-black/40 p-2 rounded">
+              <Target className="h-4 w-4 mx-auto mb-1 text-quantum-cyan" />
+              <div className="text-xs text-gray-500">Goal</div>
+              <div className="truncate">{template.goal || 'Fitness'}</div>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Button 
+              onClick={() => setSelectedTemplate(template)}
+              variant="outline" 
+              size="sm" 
+              className="w-full"
+            >
+              View Details
+            </Button>
+            <Button 
+              onClick={() => handleUseTemplate(template)}
+              disabled={creatingFromTemplate}
+              size="sm" 
+              className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {creatingFromTemplate ? 'Creating...' : 'Use Template'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  const TemplateDetails = ({ template }: { template: WorkoutTemplate }) => (
+    <Card className="bg-quantum-black/30 border-quantum-cyan/20">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-xl text-quantum-cyan">{template.name}</CardTitle>
+            <Badge variant="outline" className="mt-2 capitalize">
+              {template.difficulty}
+            </Badge>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedTemplate(null)}
+          >
+            Close
+          </Button>
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="space-y-6">
+          <div>
+            <h4 className="font-semibold mb-2">Description</h4>
+            <p className="text-gray-300">{template.description}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-quantum-cyan">{template.duration_weeks || 4}</div>
+              <div className="text-sm text-gray-400">Weeks</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-quantum-cyan">{template.frequency || 3}</div>
+              <div className="text-sm text-gray-400">Days/Week</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-quantum-cyan">{template.workout_days?.length || 0}</div>
+              <div className="text-sm text-gray-400">Workout Days</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-quantum-cyan">
+                {template.workout_days?.reduce((total, day) => total + (day.exercises?.length || 0), 0) || 0}
+              </div>
+              <div className="text-sm text-gray-400">Total Exercises</div>
+            </div>
+          </div>
+
+          {template.workout_days && template.workout_days.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-3">Workout Schedule</h4>
+              <div className="space-y-3">
+                {template.workout_days.map((day, index) => (
+                  <div key={index} className="bg-quantum-black/40 p-3 rounded">
+                    <h5 className="font-medium text-quantum-cyan mb-2">{day.day_name}</h5>
+                    <div className="text-sm text-gray-300">
+                      {day.exercises?.length || 0} exercises
+                      {day.estimated_duration && (
+                        <span className="ml-2 text-gray-400">
+                          • ~{day.estimated_duration} minutes
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Button 
+            onClick={() => handleUseTemplate(template)}
+            disabled={creatingFromTemplate}
+            className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {creatingFromTemplate ? 'Creating Workout Plan...' : 'Use This Template'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-8">
+      <div className="flex justify-center items-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-quantum-cyan"></div>
       </div>
     );
@@ -126,7 +242,6 @@ const WorkoutTemplates: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-quantum-cyan">Workout Templates</h2>
         <Badge variant="secondary" className="text-lg px-3 py-1">
@@ -134,118 +249,58 @@ const WorkoutTemplates: React.FC = () => {
         </Badge>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="flex gap-2">
-          <Button
-            variant={selectedDifficulty === '' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedDifficulty('')}
-          >
-            All Levels
-          </Button>
-          {['beginner', 'intermediate', 'advanced'].map(difficulty => (
-            <Button
-              key={difficulty}
-              variant={selectedDifficulty === difficulty ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedDifficulty(difficulty)}
-              className="capitalize"
-            >
-              {difficulty}
-            </Button>
-          ))}
-        </div>
+      {selectedTemplate ? (
+        <TemplateDetails template={selectedTemplate} />
+      ) : (
+        <Tabs defaultValue="all" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="all">All Templates</TabsTrigger>
+            <TabsTrigger value="beginner">Beginner</TabsTrigger>
+            <TabsTrigger value="intermediate">Intermediate</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          </TabsList>
 
-        <div className="flex gap-2">
-          <Button
-            variant={selectedGoal === '' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedGoal('')}
-          >
-            All Goals
-          </Button>
-          {['strength', 'cardio', 'weight_loss', 'muscle_gain', 'general_fitness'].map(goal => (
-            <Button
-              key={goal}
-              variant={selectedGoal === goal ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedGoal(goal)}
-              className="capitalize"
-            >
-              {goal.replace('_', ' ')}
-            </Button>
-          ))}
-        </div>
-      </div>
+          <TabsContent value="all">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map(template => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+          </TabsContent>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map((template) => (
-          <Card key={template.id} className="holographic-card border-quantum-cyan/30 hover:border-quantum-cyan">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg text-quantum-cyan">{template.name}</CardTitle>
-                <Badge 
-                  variant={template.difficulty === 'beginner' ? 'secondary' : 
-                          template.difficulty === 'intermediate' ? 'default' : 'destructive'}
-                  className="capitalize"
-                >
-                  {template.difficulty}
-                </Badge>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-300">{template.description}</p>
-              
-              <div className="flex flex-wrap gap-2">
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Clock className="h-3 w-3" />
-                  {template.duration_weeks} weeks
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Users className="h-3 w-3" />
-                  {template.frequency}x/week
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Target className="h-3 w-3" />
-                  <span className="capitalize">{template.goal.replace('_', ' ')}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Dumbbell className="h-3 w-3" />
-                  {template.workout_days.length} days
-                </div>
-              </div>
+          <TabsContent value="beginner">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.filter(t => t.difficulty === 'beginner').map(template => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+          </TabsContent>
 
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-white">Workout Days:</h4>
-                <ScrollArea className="h-20">
-                  <div className="space-y-1">
-                    {template.workout_days.map((day, index) => (
-                      <div key={index} className="text-xs text-gray-400">
-                        <span className="font-medium">{day.day_name}:</span> {day.exercises.length} exercises
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
+          <TabsContent value="intermediate">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.filter(t => t.difficulty === 'intermediate').map(template => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+          </TabsContent>
 
-              <Button 
-                onClick={() => useTemplate(template)}
-                className="w-full bg-quantum-cyan hover:bg-quantum-cyan/80"
-                disabled={!user}
-              >
-                Use This Template
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+          <TabsContent value="advanced">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.filter(t => t.difficulty === 'advanced').map(template => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
 
-      {filteredTemplates.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-400">No templates found matching your criteria.</p>
+      {templates.length === 0 && (
+        <div className="text-center py-12">
+          <Star className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-xl font-medium mb-2">No Templates Available</h3>
+          <p className="text-gray-400">
+            Workout templates will appear here once they're available.
+          </p>
         </div>
       )}
     </div>
