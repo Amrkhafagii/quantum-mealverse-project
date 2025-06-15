@@ -18,16 +18,14 @@ export const OrderWithContext: React.FC<OrderWithContextProps> = ({
   isProcessing,
   children
 }) => {
+  // Do not include "order", "isLoading", or "error" in the provider value
   return (
     <UnifiedOrderProvider
       value={{
-        order,
         restaurantId,
         onAssignmentUpdate,
         isProcessing,
-        onUpdate: onAssignmentUpdate,
-        isLoading: isProcessing,
-        error: null
+        onUpdate: onAssignmentUpdate
       }}
     >
       {children}
