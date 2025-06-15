@@ -61,10 +61,10 @@ const ActiveDeliveriesWithMap: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="lg:order-1">
-          <ActiveDeliveries 
-            selectedAssignmentId={selectedAssignment?.id}
-            onAssignmentSelect={handleAssignmentSelect}
-          />
+          {/* FIX: Only pass deliveryUserId as required by ActiveDeliveries */}
+          {deliveryUser && (
+            <ActiveDeliveries deliveryUserId={deliveryUser.id} />
+          )}
         </div>
         
         <div className="lg:order-2">

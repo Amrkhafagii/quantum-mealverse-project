@@ -1,301 +1,201 @@
-
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useDeliveryUser } from '@/hooks/useDeliveryUser';
-import { findNearbyAssignments, acceptDeliveryAssignment, rejectAssignment } from '@/services/delivery/deliveryOrderAssignmentService';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, DollarSign, Clock, AlertCircle, RefreshCw, Store } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  PackagePlus, 
+  MapPin, 
+  AlertCircle, 
+  Loader2,
+  RefreshCw
+} from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
+import { DeliveryAssignment } from '@/types/delivery';
+import { getAvailableDeliveryAssignments } from '@/services/delivery/deliveryAssignmentService';
 
-export const AvailableOrders: React.FC = () => {
-  const { user } = useAuth();
-  const { deliveryUser } = useDeliveryUser(user?.id);
-  const [availableOrders, setAvailableOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshingLocation, setRefreshingLocation] = useState(false);
+interface AvailableOrdersProps {
+  deliveryUserId: string;
+  onAssign: (assignmentId: string) => void;
+}
+
+export const AvailableOrders: React.FC<AvailableOrdersProps> = ({ deliveryUserId, onAssign }) => {
+  const { toast } = useToast();
+  const [availableAssignments, setAvailableAssignments] = useState<DeliveryAssignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const { location, permissionStatus, error, getCurrentLocation, locationIsValid, isLocationStale } = useLocationTracker();
   
-  // Use enhanced location tracker
-  const { 
-    location, 
-    getCurrentLocation,
-    locationIsValid, 
-    isLocationStale,
-    lastUpdated,
-    permissionStatus
-  } = useLocationTracker();
-  
-  // Get user's current location on component mount
   useEffect(() => {
-    if (!locationIsValid()) {
-      handleRefreshLocation();
-    }
-  }, []);
+    if (!deliveryUserId) return;
+    loadAvailableAssignments();
+    
+    // Poll for new assignments every 30 seconds
+    const interval = setInterval(loadAvailableAssignments, 30000);
+    return () => clearInterval(interval);
+  }, [deliveryUserId, location]);
   
-  const handleRefreshLocation = async () => {
+  const loadAvailableAssignments = useCallback(async () => {
+    if (!deliveryUserId) return;
     try {
-      setRefreshingLocation(true);
-      await getCurrentLocation();
-    } catch (err) {
-      console.error("Error getting location:", err);
-      toast({
-        title: "Location Error",
-        description: "Please enable location services to see nearby orders",
-        variant: "destructive",
-      });
-    } finally {
-      setRefreshingLocation(false);
-    }
-  };
-  
-  const fetchAvailableOrders = async () => {
-    if (!locationIsValid() || !deliveryUser) {
-      if (!locationIsValid()) {
+      setLoading(true);
+      if (!location || !locationIsValid()) {
+        await getCurrentLocation();
+      }
+      
+      if (!location || !locationIsValid()) {
         toast({
-          title: "Location Required",
-          description: "Please update your location to see available orders",
-          variant: "destructive",
+          title: "Location required",
+          description: "Please enable location services to view available deliveries.",
+          variant: "destructive"
         });
         return;
       }
-      return;
-    }
-    
-    // Check if location is stale and prompt for refresh
-    if (isLocationStale()) {
+      
+      const assignments = await getAvailableDeliveryAssignments(deliveryUserId, location.latitude, location.longitude);
+      setAvailableAssignments(assignments);
+    } catch (error) {
+      console.error('Error loading available assignments:', error);
       toast({
-        title: "Location is outdated",
-        description: "Your location data is over 2 minutes old. Consider refreshing.",
+        title: "Couldn't load deliveries",
+        description: "There was a problem loading available deliveries.",
+        variant: "destructive"
       });
-    }
-    
-    try {
-      setLoading(true);
-      setError(null);
-      console.log(`Searching for orders near: ${location.latitude}, ${location.longitude}`);
-      const assignments = await findNearbyAssignments(
-        location.latitude,
-        location.longitude,
-        10 // 10km radius
-      );
-      console.log(`Found ${assignments.length} available delivery assignments`);
-      setAvailableOrders(assignments);
-    } catch (err) {
-      console.error('Error fetching available orders:', err);
-      setError('Failed to load nearby orders');
     } finally {
       setLoading(false);
     }
-  };
+  }, [deliveryUserId, location, getCurrentLocation, locationIsValid, toast]);
   
-  useEffect(() => {
-    if (locationIsValid() && deliveryUser) {
-      fetchAvailableOrders();
-      
-      // Set up polling for new orders every 30 seconds
-      const interval = setInterval(fetchAvailableOrders, 30000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [location, deliveryUser]);
-  
-  const handleAccept = async (assignmentId: string) => {
-    if (!deliveryUser) return;
-    
+  const handleAssignOrder = async (assignmentId: string) => {
     try {
-      await acceptDeliveryAssignment(assignmentId, deliveryUser.id);
+      onAssign(assignmentId);
       toast({
-        title: "Order Accepted",
-        description: "You have a new delivery assignment",
+        title: "Order assigned",
+        description: "The order has been assigned to you.",
       });
-      setAvailableOrders(availableOrders.filter(order => order.id !== assignmentId));
-    } catch (err) {
-      console.error('Error accepting order:', err);
+    } catch (error) {
+      console.error('Error assigning order:', error);
       toast({
-        title: "Error",
-        description: "Failed to accept the order",
-        variant: "destructive",
+        title: "Assignment failed",
+        description: "Couldn't assign the order. Please try again.",
+        variant: "destructive"
       });
     }
   };
   
-  const handleReject = async (assignmentId: string) => {
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
-      await rejectAssignment(assignmentId);
-      setAvailableOrders(availableOrders.filter(order => order.id !== assignmentId));
-    } catch (err) {
-      console.error('Error rejecting order:', err);
-      toast({
-        title: "Error",
-        description: "Failed to reject the order",
-        variant: "destructive",
-      });
+      await loadAvailableAssignments();
+    } finally {
+      setRefreshing(false);
     }
   };
   
-  const refreshOrders = () => {
-    fetchAvailableOrders();
-  };
-  
-  if (!deliveryUser || deliveryUser.status !== 'active') {
+  if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Available Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8">
-            <AlertCircle className="h-12 w-12 text-gray-400 mb-2" />
-            <p className="text-lg font-medium">Not Available</p>
-            <p className="text-sm text-gray-500 text-center">
-              You need to be active to receive orders.
-              Please set your status to active first.
-            </p>
-          </div>
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+      </div>
+    );
+  }
+  
+  if (availableAssignments.length === 0) {
+    return (
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardContent className="p-8 flex flex-col items-center justify-center">
+          <PackagePlus className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-300 mb-2">No Available Deliveries</h3>
+          <p className="text-gray-400 text-center max-w-md">
+            There are no available deliveries in your area at the moment. Please check back later.
+          </p>
+          {permissionStatus === 'denied' && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Location access denied. Please enable location services in your browser settings.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     );
   }
   
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex justify-between items-center">
-          <span>Available Orders</span>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefreshLocation}
-              disabled={refreshingLocation}
-            >
-              {refreshingLocation ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <MapPin className="h-4 w-4 mr-1" />
-              )}
-              {refreshingLocation ? "Updating..." : "Update Location"}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={refreshOrders} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            </Button>
-          </div>
-        </CardTitle>
-        {locationIsValid() && lastUpdated && (
-          <p className="text-xs text-gray-400 mt-1">
-            Location updated: {new Date(lastUpdated).toLocaleTimeString()}
-            {isLocationStale() && (
-              <span className="text-yellow-400 ml-2">(outdated)</span>
-            )}
-          </p>
-        )}
-        {permissionStatus === 'prompt' && (
-          <p className="text-xs text-yellow-400 mt-1">
-            Location permission needed
-          </p>
-        )}
-        {permissionStatus === 'denied' && (
-          <p className="text-xs text-red-400 mt-1">
-            Location access denied. Please enable in your browser settings.
-          </p>
-        )}
-      </CardHeader>
-      
-      <CardContent>
-        {!locationIsValid() ? (
-          <div className="text-center py-8 text-yellow-400">
-            <MapPin className="h-8 w-8 mx-auto mb-2" />
-            <p className="mb-2">Location services required</p>
-            <p className="text-sm text-gray-400 mb-4">We need your location to find nearby orders</p>
-            <Button 
-              onClick={handleRefreshLocation}
-              className="bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-              disabled={refreshingLocation}
-            >
-              {refreshingLocation ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Getting Location...
-                </>
-              ) : (
-                <>Share Location</>
-              )}
-            </Button>
-          </div>
-        ) : loading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-400">
-            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-            <p>{error}</p>
-          </div>
-        ) : availableOrders.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <p className="mb-2">No orders available nearby</p>
-            <p className="text-sm">Check back soon or widen your delivery radius</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {availableOrders.map((order) => (
-              <Card key={order.id} className="bg-quantum-darkBlue/50">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">
-                      {order.restaurant?.name || 'Restaurant'}
-                    </CardTitle>
-                    <span className="text-lg font-bold text-quantum-cyan">
-                      $5.00 <span className="text-xs font-normal">base</span>
-                    </span>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="pb-2">
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm">
-                      <Store className="h-4 w-4 mr-2 text-quantum-cyan" />
-                      <span className="line-clamp-1">{order.orders?.customer_name || 'Customer'}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <MapPin className="h-4 w-4 mr-2 text-quantum-cyan" />
-                      <span>{order.distance_km.toFixed(1)} km away</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-2 text-quantum-cyan" />
-                      <span>Est. delivery time: {Math.round(order.estimate_minutes)} min</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <DollarSign className="h-4 w-4 mr-2 text-quantum-cyan" />
-                      <span>Potential tip: $2-4</span>
-                    </div>
-                  </div>
-                </CardContent>
-                
-                <CardFooter className="pt-1">
-                  <div className="flex justify-between w-full gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="w-1/2"
-                      onClick={() => handleReject(order.id)}
-                    >
-                      Decline
-                    </Button>
-                    <Button 
-                      className="w-1/2 bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-                      onClick={() => handleAccept(order.id)}
-                    >
-                      Accept
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Available Deliveries</h2>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          disabled={refreshing}
+          onClick={handleRefresh}
+        >
+          {refreshing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </>
+          )}
+        </Button>
+      </div>
+      {availableAssignments.map((assignment) => (
+        <Card key={assignment.id} className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Order #{assignment.order_id.slice(-6)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-400">Restaurant</p>
+                  <p className="font-medium">[Restaurant Name]</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Customer</p>
+                  <p className="font-medium">[Customer Name]</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Pickup Time</p>
+                  <p className="font-medium">
+                    {assignment.pickup_time 
+                      ? new Date(assignment.pickup_time).toLocaleTimeString() 
+                      : 'Not specified'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Estimated Delivery</p>
+                  <p className="font-medium">
+                    {assignment.estimated_delivery_time 
+                      ? new Date(assignment.estimated_delivery_time).toLocaleTimeString()
+                      : 'Not specified'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-4">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  View on Map
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleAssignOrder(assignment.id)}
+                >
+                  Accept Delivery
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 };
