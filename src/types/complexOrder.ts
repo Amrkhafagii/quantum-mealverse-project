@@ -18,3 +18,27 @@ export type ProcessComplexOrderFn = (
   restaurantId: string,
   mealIds: string[]
 ) => Promise<void>;
+
+// Add the missing type definitions.
+export interface IngredientAvailabilityCheck {
+  ingredientId: string;
+  available: boolean;
+  requiredAmount: number;
+  stockAmount: number;
+}
+
+export interface PreparationInstruction {
+  stepNumber: number;
+  instruction: string;
+  estimatedTimeMinutes?: number;
+  dependencies?: number[];
+}
+
+export interface OrderComplexityAnalysis {
+  orderId: string;
+  totalSteps: number;
+  estimatedDurationMinutes: number;
+  kitchenUtilizationIndex: number;
+  blockingIngredients: string[];
+}
+
