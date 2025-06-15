@@ -16,7 +16,7 @@ interface AuthFormProps {
 
 const AuthForm: React.FC<AuthFormProps> = ({ type = 'login' }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>();
-  const auth = useAuth() as any; // Allow all expected functions for now
+  const auth = useAuth() as any;
   const { user, loading } = auth;
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -34,8 +34,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = 'login' }) => {
 
     try {
       if (type === 'login') {
-        // FIX: Ensure calling signIn (lowercase i), not signIn (uppercase I)
-        await auth.signIn(data.email, data.password);
+        // Use login function from auth context
+        await auth.login(data.email, data.password);
         toast({
           title: 'Success',
           description: 'Logged in successfully!',
