@@ -1,38 +1,76 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutRecommendation } from '@/types/fitness/recommendations';
-import { IntelligentRecommendationEngine } from './intelligentRecommendationEngine';
-import { AdaptiveWorkoutEngine } from './adaptiveWorkoutEngine';
 
-export const fetchUserRecommendations = async (userId: string): Promise<WorkoutRecommendation[]> => {
+export const getWorkoutRecommendations = async (userId: string): Promise<WorkoutRecommendation[]> => {
   const { data, error } = await supabase
     .from('workout_recommendations')
     .select('*')
     .eq('workout_recommendations_user_id', userId)
     .eq('dismissed', false)
-    .eq('applied', false)
-    .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
-    .order('confidence_score', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
-  
+
+  // Map database fields to interface fields
   return (data || []).map(item => ({
     id: item.id,
-    user_id: item.user_id,
-    title: item.title,
-    description: item.description || '',
+    user_id: item.workout_recommendations_user_id,
+    title: item.name,
+    description: item.description,
     type: item.type,
-    reason: item.reason || '',
-    confidence_score: item.confidence_score || 0,
-    metadata: item.metadata || {},
-    suggested_at: item.suggested_at || '',
-    applied: item.applied || false,
-    applied_at: item.applied_at || '',
-    dismissed: item.dismissed || false,
-    dismissed_at: item.dismissed_at || '',
-    expires_at: item.expires_at || '',
-    created_at: item.created_at || '',
-    updated_at: item.updated_at || ''
+    reason: item.reason,
+    confidence_score: item.confidence_score,
+    metadata: item.metadata,
+    suggested_at: item.suggested_at,
+    applied: item.applied,
+    applied_at: item.applied_at,
+    dismissed: item.dismissed,
+    dismissed_at: item.dismissed_at,
+    expires_at: item.expires_at,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+    // Legacy compatibility fields with defaults
+    difficulty: 'intermediate' as const,
+    duration_minutes: 45,
+    target_muscle_groups: [],
+    recommended_frequency: 3
+  })) as WorkoutRecommendation[];
+};
+
+export const getArchivedRecommendations = async (userId: string): Promise<WorkoutRecommendation[]> => {
+  const { data, error } = await supabase
+    .from('workout_recommendations')
+    .select('*')
+    .eq('workout_recommendations_user_id', userId)
+    .or('dismissed.eq.true,applied.eq.true')
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Map database fields to interface fields
+  return (data || []).map(item => ({
+    id: item.id,
+    user_id: item.workout_recommendations_user_id,
+    title: item.name,
+    description: item.description,
+    type: item.type,
+    reason: item.reason,
+    confidence_score: item.confidence_score,
+    metadata: item.metadata,
+    suggested_at: item.suggested_at,
+    applied: item.applied,
+    applied_at: item.applied_at,
+    dismissed: item.dismissed,
+    dismissed_at: item.dismissed_at,
+    expires_at: item.expires_at,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+    // Legacy compatibility fields with defaults
+    difficulty: 'intermediate' as const,
+    duration_minutes: 45,
+    target_muscle_groups: [],
+    recommended_frequency: 3
   })) as WorkoutRecommendation[];
 };
 

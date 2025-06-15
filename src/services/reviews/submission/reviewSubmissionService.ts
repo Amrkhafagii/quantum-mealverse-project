@@ -12,7 +12,7 @@ export const submitReview = async (review: Omit<Review, 'id' | 'created_at' | 'u
     .from('reviews')
     .select('id')
     .match({
-      user_id: review.user_id,
+      reviews_user_id: review.user_id,
       meal_id: review.meal_id,
       restaurant_id: review.restaurant_id
     })
@@ -24,10 +24,23 @@ export const submitReview = async (review: Omit<Review, 'id' | 'created_at' | 'u
     throw new Error('You have already reviewed this meal from this restaurant');
   }
   
+  // Map interface fields to database fields
+  const dbReview = {
+    reviews_user_id: review.user_id,
+    meal_id: review.meal_id,
+    restaurant_id: review.restaurant_id,
+    rating: review.rating,
+    comment: review.comment,
+    images: review.images,
+    status: review.status,
+    is_flagged: review.is_flagged,
+    is_verified_purchase: review.is_verified_purchase
+  };
+  
   // Add the review
   const { data, error } = await supabase
     .from('reviews')
-    .insert(review)
+    .insert(dbReview)
     .select()
     .single();
     

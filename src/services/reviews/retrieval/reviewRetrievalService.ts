@@ -20,11 +20,16 @@ export const getMealReviews = async (mealId: string, restaurantId: string, page 
     
   if (error) throw error;
   
+  // Map database fields to interface fields
+  const mappedReviews = (data || []).map(item => ({
+    ...item,
+    user_id: item.reviews_user_id
+  })) as Review[];
+  
   return { 
-    reviews: data as Review[], 
+    reviews: mappedReviews, 
     total: count || 0,
     page,
     pages: count ? Math.ceil(count / limit) : 0
   };
 };
-

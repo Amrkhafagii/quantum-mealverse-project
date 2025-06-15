@@ -56,7 +56,7 @@ export const userTypeService = {
       const { error } = await originalSupabase
         .from('user_types')
         .upsert({ 
-          user_id: userId, 
+          user_types_user_id: userId, 
           type 
         });
       

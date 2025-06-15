@@ -135,13 +135,13 @@ export const usePrivacySettings = (userId: string) => {
     }
   };
 
-  const exportLocationData = async (format: string = 'json', includeAnonymized: boolean = false) => {
+  const exportLocationData = async (format: 'json' | 'csv' | 'gpx' = 'json', includeAnonymized: boolean = false) => {
     if (!userId) return;
     
     setIsProcessing(true);
     try {
       const result = await privacyDataService.exportLocationData(userId, format);
-      if (result.success) {
+      if (result) {
         toast.success('Data export initiated');
       } else {
         toast.error('Failed to export data');

@@ -1,6 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { RestaurantReview, MealRating } from '@/types/notifications';
+import type { RestaurantReview } from '@/types/notifications';
+
+// Define MealRating interface locally since it's not in types/notifications
+interface MealRating {
+  meal_id: string;
+  restaurant_id: string;
+  avg_rating: number;
+  review_count: number;
+  rating_distribution: Record<string, number>;
+  last_updated: string;
+}
 
 export class ReviewService {
   // Get reviews for a restaurant
@@ -16,6 +26,7 @@ export class ReviewService {
     if (error) throw error;
     return (data || []).map(review => ({
       ...review,
+      user_id: review.reviews_user_id,
       status: review.status as RestaurantReview['status'],
       comment: review.comment || '',
       images: review.images || [],
