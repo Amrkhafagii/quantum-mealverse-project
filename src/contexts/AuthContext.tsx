@@ -44,11 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserType(userMetadata.user_type);
         return;
       }
-      // Query user_types using user_id (migration: use new column name)
+      // Query user_types using user_types_user_id
       const { data, error } = await supabase
         .from('user_types')
         .select('type')
-        .eq('user_id', currentUser.id)
+        .eq('user_types_user_id', currentUser.id)
         .single();
 
       setUserType(data?.type ?? null);
