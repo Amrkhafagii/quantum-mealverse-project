@@ -67,7 +67,7 @@ export interface Exercise {
   sets: number;
   reps: number | string;
   weight?: number;
-  duration?: string | number;
+  duration?: string | number; // Keep as string | number for compatibility
   rest_time?: number;
   rest?: number;
   rest_seconds?: number;

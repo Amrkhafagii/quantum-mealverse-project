@@ -37,7 +37,7 @@ export interface Exercise {
   sets: number;
   reps: number | string;
   weight?: number;
-  duration?: number;
+  duration?: string | number; // Changed to match fitness.d.ts
   rest_time?: number;
   rest?: number;
   rest_seconds?: number;
