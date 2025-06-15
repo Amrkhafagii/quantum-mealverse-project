@@ -30,14 +30,14 @@ export const applyWorkoutRecommendation = async (recommendationId: string, userI
     // Create a default workout plan based on the recommendation
     if (recommendation) {
       const defaultPlan = {
+        workout_plans_user_id: userId, // Use correct database field name
         name: recommendation.title || 'Recommended Plan',
         description: recommendation.description || 'Plan created from recommendation',
         goal: recommendation.type || 'fitness',
-        user_id: userId, // Now expects UUID string
         difficulty: 'intermediate',
         frequency: 3,
         duration_weeks: 4,
-        workout_days: [
+        workout_days: JSON.stringify([
           {
             day_name: 'Day 1',
             exercises: [
@@ -64,16 +64,13 @@ export const applyWorkoutRecommendation = async (recommendationId: string, userI
               }
             ]
           }
-        ]
+        ])
       };
       
       // Insert the default plan into the database
       const { error: planError } = await supabase
         .from('workout_plans')
-        .insert([{
-          ...defaultPlan,
-          workout_days: JSON.stringify(defaultPlan.workout_days)
-        }]);
+        .insert([defaultPlan]);
         
       if (planError) throw planError;
     }

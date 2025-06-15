@@ -1,4 +1,5 @@
-import { Exercise, WorkoutDay, CompletedExercise, ExerciseSet } from '@/types/fitness';
+
+import { Exercise, WorkoutDay, CompletedExercise } from '@/types/fitness';
 
 // Calculate total volume for an exercise (sets * reps * weight)
 export const calculateExerciseVolume = (sets: number, reps: number, weight: number): number => {
@@ -176,14 +177,13 @@ export const getSetsFromCompletedExercise = (exercise: CompletedExercise): any[]
   return [];
 };
 
-// Convert completed exercises to exercise sets format
-export const convertToExerciseSets = (completedExercises: CompletedExercise[], userId: string): ExerciseSet[] => {
-  const exerciseSets: ExerciseSet[] = [];
+// Convert completed exercises to simple format for logging
+export const convertToSimpleExerciseLog = (completedExercises: CompletedExercise[], userId: string): any[] => {
+  const exerciseLogs: any[] = [];
   
   completedExercises.forEach(exercise => {
     exercise.sets_completed?.forEach((set, index) => {
-      exerciseSets.push({
-        id: `set-${Date.now()}-${index}`,
+      exerciseLogs.push({
         user_id: userId,
         exercise_name: exercise.exercise_name,
         weight: set.weight,
@@ -195,5 +195,5 @@ export const convertToExerciseSets = (completedExercises: CompletedExercise[], u
     });
   });
   
-  return exerciseSets;
+  return exerciseLogs;
 };
