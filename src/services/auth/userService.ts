@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { UserType, DeliveryUser, RestaurantUser, CustomerProfile } from '@/types/user';
 
@@ -6,7 +7,7 @@ export const getUserType = async (userId: string): Promise<string | null> => {
     const { data, error } = await supabase
       .from('user_types')
       .select('type')
-      .eq('user_types_user_id', userId)
+      .eq('user_id', userId) // changed from user_types_user_id
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -26,12 +27,12 @@ export const createUserType = async (userId: string, type: string): Promise<bool
     const { error } = await supabase
       .from('user_types')
       .upsert({
-        user_types_user_id: userId,
+        user_id: userId,
         type,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'user_types_user_id'
+        onConflict: 'user_id'
       });
 
     if (error) {
@@ -51,7 +52,7 @@ export const getRestaurantUserProfile = async (userId: string): Promise<Restaura
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
-      .eq('restaurants_user_id', userId)
+      .eq('user_id', userId) // changed from restaurants_user_id
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -67,7 +68,7 @@ export const getRestaurantUserProfile = async (userId: string): Promise<Restaura
 
     return {
       id: typeof data.id === "string" ? data.id : "",
-      restaurants_user_id: typeof data.restaurants_user_id === "string" ? data.restaurants_user_id : "",
+      restaurants_user_id: typeof data.user_id === "string" ? data.user_id : "",
       name: typeof data.name === "string" ? data.name : "",
       address: typeof data.address === "string" ? data.address : "",
       phone: typeof data.phone === "string" ? data.phone : "",

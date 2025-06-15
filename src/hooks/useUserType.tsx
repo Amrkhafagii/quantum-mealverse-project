@@ -28,7 +28,7 @@ export function useUserType() {
         const { data, error } = await supabase
           .from('user_types')
           .select('type')
-          .eq('user_types_user_id', user.id)
+          .eq('user_id', user.id)
           .single();
 
         setUserType(data?.type || null);

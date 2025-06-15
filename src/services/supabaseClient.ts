@@ -36,7 +36,7 @@ export const userTypeService = {
       const { data, error } = await originalSupabase
         .from('user_types')
         .select('type')
-        .eq('user_types_user_id', userId)
+        .eq('user_id', userId)
         .maybeSingle();
         
       if (error) {
@@ -56,7 +56,7 @@ export const userTypeService = {
       const { error } = await originalSupabase
         .from('user_types')
         .upsert({ 
-          user_types_user_id: userId, 
+          user_id: userId, 
           type 
         });
       

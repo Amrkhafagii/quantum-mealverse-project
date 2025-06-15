@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Updated: fetchUserType grabs from user_types with correct column
+  // Updated: fetchUserType now uses 'user_id'
   const fetchUserType = async (currentUser: User | null) => {
     if (!currentUser) {
       setUserType(null);
@@ -44,11 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserType(userMetadata.user_type);
         return;
       }
-      // Query user_types using user_types_user_id
+      // Query user_types using user_id
       const { data, error } = await supabase
         .from('user_types')
         .select('type')
-        .eq('user_types_user_id', currentUser.id)
+        .eq('user_id', currentUser.id)
         .single();
 
       setUserType(data?.type ?? null);
@@ -85,14 +85,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
       setSession(session);
       setUser(session?.user as UserWithMetadata ?? null);
 
       if (session?.user && isInitialized) {
-        await fetchUserType(session.user);
+        setTimeout(() => fetchUserType(session.user), 0);
       } else if (!session) {
         setUserType(null);
       }

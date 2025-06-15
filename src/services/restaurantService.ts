@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Restaurant } from '@/types/restaurant';
 
@@ -8,7 +7,7 @@ class RestaurantService {
       const { data, error } = await supabase
         .from('restaurants')
         .select('*')
-        .eq('restaurants_user_id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
@@ -165,7 +164,7 @@ class RestaurantService {
   private mapDatabaseToRestaurant(data: any): Restaurant {
     return {
       id: data.id,
-      user_id: data.restaurants_user_id || data.user_id,
+      user_id: data.user_id,
       name: data.name,
       address: data.address,
       city: data.city,
