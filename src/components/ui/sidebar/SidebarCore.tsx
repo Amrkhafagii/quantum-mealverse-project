@@ -5,9 +5,16 @@ import { useSidebar } from "./SidebarProvider";
 import { cn } from "@/lib/utils";
 
 /**
- * Sidebar main container. Uses context for collapsed state.
- * @param {SidebarProps} props
- * @returns {JSX.Element}
+ * Sidebar main container. Uses context for collapsed state,
+ * and supports transitions (Tailwind CSS, customizable).
+ *
+ * For open/close animation, className and 'w-64'/'w-16' are animated using 'transition-all'.
+ * To customize animation:
+ *    - Add Tailwind transition utility classes in 'className'.
+ *    - Animate height/opacity for overlays, etc.
+ *
+ * Example integration with react-router:
+ *   See SidebarMenuButton doc for usage with <NavLink>.
  */
 export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
   function Sidebar({ children, className, style }, ref) {
@@ -33,7 +40,7 @@ Sidebar.displayName = "Sidebar";
 
 /**
  * SidebarTrigger toggles the sidebar open/collapsed state.
- * @param props - Button props
+ * You may position and animate this as needed.
  */
 export const SidebarTrigger = React.forwardRef<
   HTMLButtonElement,
@@ -58,3 +65,4 @@ export const SidebarTrigger = React.forwardRef<
   );
 });
 SidebarTrigger.displayName = "SidebarTrigger";
+
