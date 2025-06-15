@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign, Star, Clock, Target } from 'lucide-react';
@@ -9,7 +10,7 @@ export const PerformanceDashboard: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
   const [todayMetrics, setTodayMetrics] = useState<RestaurantPerformanceMetrics | null>(null);
   const [weeklySummary, setWeeklySummary] = useState<any>(null);
-  const [peakHours, setPeakHours] = useState<Record<string, number>>({});
+  const [peakHours, setPeakHours] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,9 +26,25 @@ export const PerformanceDashboard: React.FC = () => {
 
         setTodayMetrics(today);
         setWeeklySummary(weekly);
-        setPeakHours(peaks);
+        
+        // Handle peak hours data - convert to array format if it's an object
+        if (peaks && typeof peaks === 'object') {
+          if (Array.isArray(peaks)) {
+            setPeakHours(peaks);
+          } else {
+            // Convert object to array format
+            const peakHoursArray = Object.entries(peaks).map(([hour, count]) => ({
+              hour,
+              orders: typeof count === 'object' ? count.orders || count : count
+            }));
+            setPeakHours(peakHoursArray);
+          }
+        } else {
+          setPeakHours([]);
+        }
       } catch (error) {
         console.error('Error loading performance data:', error);
+        setPeakHours([]); // Set empty array on error
       } finally {
         setLoading(false);
       }
@@ -164,16 +181,20 @@ export const PerformanceDashboard: React.FC = () => {
           <CardTitle>Peak Hours Analysis</CardTitle>
         </CardHeader>
         <CardContent>
-          {Object.keys(peakHours).length === 0 ? (
+          {!peakHours || peakHours.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No order data available for peak hours analysis</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {Object.entries(peakHours)
-                .sort(([a], [b]) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]))
-                .map(([hour, count]) => (
-                  <div key={hour} className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium">{hour}</p>
-                    <p className="text-lg font-bold text-blue-600">{count}</p>
+              {peakHours
+                .sort((a, b) => {
+                  const hourA = typeof a.hour === 'string' ? parseInt(a.hour.split(':')[0]) : 0;
+                  const hourB = typeof b.hour === 'string' ? parseInt(b.hour.split(':')[0]) : 0;
+                  return hourA - hourB;
+                })
+                .map((item, index) => (
+                  <div key={`${item.hour}-${index}`} className="text-center p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium">{item.hour || 'N/A'}</p>
+                    <p className="text-lg font-bold text-blue-600">{item.orders || 0}</p>
                   </div>
                 ))}
             </div>
