@@ -2,72 +2,68 @@
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
-import { OrderRepository } from '@/repositories/OrderRepository';
-import { OrderDataValidator } from '@/validation/OrderDataValidator';
-import { OrderErrorService } from '@/services/errors/OrderErrorService';
+import { MultiRestaurantAssignmentService } from '../assignments/MultiRestaurantAssignmentService';
+
+export interface CustomerData {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+export interface DeliveryData {
+  address: string;
+  city: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  method: string;
+  instructions?: string;
+}
+
+export interface PaymentData {
+  method: string;
+  total: number;
+  subtotal: number;
+}
 
 export interface CreateOrderRequest {
-  customerData: {
-    id?: string;
-    name: string;
-    email: string;
-    phone: string;
-  };
-  deliveryData: {
-    address: string;
-    city: string;
-    latitude?: number;
-    longitude?: number;
-    method: 'delivery' | 'pickup';
-    instructions?: string;
-  };
-  paymentData: {
-    method: 'cash' | 'visa';
-    total: number;
-    subtotal: number;
-  };
+  customerData: CustomerData;
+  deliveryData: DeliveryData;
+  paymentData: PaymentData;
   items: CartItem[];
 }
 
-export interface OrderCreationResult {
+export interface CreateOrderResult {
   success: boolean;
   orderId?: string;
   order?: Order;
   error?: string;
-  errorCode?: string;
+  assignmentInfo?: {
+    restaurantCount: number;
+    restaurants: string[];
+  };
 }
 
 export class UnifiedOrderService {
-  private orderRepository: OrderRepository;
-  private validator: OrderDataValidator;
-  private errorService: OrderErrorService;
-
-  constructor() {
-    this.orderRepository = new OrderRepository();
-    this.validator = new OrderDataValidator();
-    this.errorService = new OrderErrorService();
-  }
-
-  async createOrder(request: CreateOrderRequest): Promise<OrderCreationResult> {
+  /**
+   * Create a new order with multi-restaurant assignment
+   */
+  static async createOrder(request: CreateOrderRequest): Promise<CreateOrderResult> {
     try {
-      console.log('UnifiedOrderService: Starting order creation process');
+      console.log('UnifiedOrderService: Creating order with multi-restaurant assignment');
 
-      // Validate the order request
-      const validationResult = await this.validator.validateOrderRequest(request);
-      if (!validationResult.isValid) {
-        return {
-          success: false,
-          error: validationResult.errors.join(', '),
-          errorCode: 'VALIDATION_FAILED'
-        };
+      // Generate order ID
+      const { data: orderIdResult, error: orderIdError } = await supabase
+        .rpc('generate_order_id');
+
+      if (orderIdError || !orderIdResult) {
+        console.error('Error generating order ID:', orderIdError);
+        return { success: false, error: 'Failed to generate order ID' };
       }
 
-      // Ensure customer_id is provided or generate a guest ID
-      const customerId = request.customerData.id || `guest_${Date.now()}`;
-
       // Create the order
-      const order = await this.orderRepository.createOrder({
-        customer_id: customerId,
+      const orderData = {
+        customer_id: request.customerData.id,
         customer_name: request.customerData.name,
         customer_email: request.customerData.email,
         customer_phone: request.customerData.phone,
@@ -77,70 +73,160 @@ export class UnifiedOrderService {
         longitude: request.deliveryData.longitude,
         delivery_method: request.deliveryData.method,
         payment_method: request.paymentData.method,
-        total: request.paymentData.total,
+        notes: request.deliveryData.instructions,
         subtotal: request.paymentData.subtotal,
         delivery_fee: request.paymentData.total - request.paymentData.subtotal,
+        total: request.paymentData.total,
         status: 'pending',
-        notes: request.deliveryData.instructions,
-        assignment_source: 'nutrition_generation'
-      });
+        formatted_order_id: orderIdResult,
+        assignment_source: 'unified_service'
+      };
 
-      if (!order) {
-        throw new Error('Failed to create order');
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+
+      if (orderError || !order) {
+        console.error('Error creating order:', orderError);
+        return { success: false, error: 'Failed to create order' };
       }
+
+      console.log('Order created with ID:', order.id);
 
       // Create order items
-      const orderItems = await this.orderRepository.createOrderItems(order.id!, request.items);
-      if (!orderItems) {
-        throw new Error('Failed to create order items');
+      const orderItems = request.items.map(item => ({
+        order_id: order.id,
+        meal_id: item.meal_id || null,
+        menu_item_id: item.menu_item_id || null,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        source_type: item.source_type || 'nutrition_generation'
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        console.error('Error creating order items:', itemsError);
+        // Continue with assignment even if items fail
       }
 
-      console.log('UnifiedOrderService: Order created successfully', order.id);
+      // Find nearby restaurants and create assignments
+      let assignmentInfo = undefined;
+      if (request.deliveryData.latitude && request.deliveryData.longitude) {
+        console.log('Finding nearby restaurants for multi-assignment');
+        
+        const nearbyRestaurants = await MultiRestaurantAssignmentService.findNearbyRestaurants(
+          request.deliveryData.latitude,
+          request.deliveryData.longitude,
+          15 // 15km radius
+        );
+
+        if (nearbyRestaurants.length > 0) {
+          const assignmentResult = await MultiRestaurantAssignmentService.createMultipleAssignments(
+            order.id,
+            nearbyRestaurants,
+            15 // 15 minutes expiration
+          );
+
+          if (assignmentResult.success) {
+            assignmentInfo = {
+              restaurantCount: assignmentResult.assignmentCount,
+              restaurants: nearbyRestaurants.map(r => r.name)
+            };
+
+            // Update order status to awaiting restaurant
+            await supabase
+              .from('orders')
+              .update({ status: 'awaiting_restaurant' })
+              .eq('id', order.id);
+
+            console.log(`Created ${assignmentResult.assignmentCount} restaurant assignments`);
+          } else {
+            console.warn('Failed to create restaurant assignments:', assignmentResult.error);
+          }
+        } else {
+          console.warn('No nearby restaurants found for order');
+          
+          // Update order status to indicate no restaurants available
+          await supabase
+            .from('orders')
+            .update({ status: 'no_restaurant_available' })
+            .eq('id', order.id);
+        }
+      }
 
       return {
         success: true,
         orderId: order.id,
-        order: { ...order, order_items: orderItems }
+        order: order as Order,
+        assignmentInfo
       };
-
     } catch (error) {
-      console.error('UnifiedOrderService: Order creation failed', error);
-      
-      const handledError = this.errorService.handleOrderError(error);
+      console.error('Error in UnifiedOrderService.createOrder:', error);
       return {
         success: false,
-        error: handledError.message,
-        errorCode: handledError.code
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
 
-  async getOrderById(orderId: string): Promise<Order | null> {
+  /**
+   * Get order details with assignment status
+   */
+  static async getOrderWithAssignments(orderId: string): Promise<{
+    order: Order | null;
+    assignments: any[];
+    acceptedAssignment: any | null;
+  }> {
     try {
-      return await this.orderRepository.getOrderById(orderId);
-    } catch (error) {
-      console.error('UnifiedOrderService: Failed to get order', error);
-      return null;
-    }
-  }
+      // Get order details
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(*)
+        `)
+        .eq('id', orderId)
+        .maybeSingle();
 
-  async getUserOrders(userId: string): Promise<Order[]> {
-    try {
-      return await this.orderRepository.getUserOrders(userId);
-    } catch (error) {
-      console.error('UnifiedOrderService: Failed to get user orders', error);
-      return [];
-    }
-  }
+      if (orderError) {
+        console.error('Error fetching order:', orderError);
+        return { order: null, assignments: [], acceptedAssignment: null };
+      }
 
-  async updateOrderStatus(orderId: string, status: string, metadata?: any): Promise<boolean> {
-    try {
-      return await this.orderRepository.updateOrderStatus(orderId, status, metadata);
+      // Get all assignments for this order
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('restaurant_assignments')
+        .select(`
+          *,
+          restaurants!restaurant_assignments_restaurant_id_fkey(id, name, address)
+        `)
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false });
+
+      if (assignmentsError) {
+        console.error('Error fetching assignments:', assignmentsError);
+        return { order, assignments: [], acceptedAssignment: null };
+      }
+
+      // Find accepted assignment
+      const acceptedAssignment = assignments?.find(a => a.status === 'accepted') || null;
+
+      return {
+        order,
+        assignments: assignments || [],
+        acceptedAssignment
+      };
     } catch (error) {
-      console.error('UnifiedOrderService: Failed to update order status', error);
-      return false;
+      console.error('Error in getOrderWithAssignments:', error);
+      return { order: null, assignments: [], acceptedAssignment: null };
     }
   }
 }
 
-export const unifiedOrderService = new UnifiedOrderService();
+export const unifiedOrderService = UnifiedOrderService;

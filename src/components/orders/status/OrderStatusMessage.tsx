@@ -1,106 +1,158 @@
 
 import React from 'react';
-import { Building } from 'lucide-react';
-import { Order } from '@/types/order';
-import { AssignmentStatus } from '@/types/webhook';
+import { Clock, CheckCircle, XCircle, AlertTriangle, Search } from 'lucide-react';
+import { useOrderAssignmentStatus } from '@/hooks/useOrderAssignmentStatus';
 
 interface OrderStatusMessageProps {
-  order: Order;
-  assignmentStatus?: AssignmentStatus | null;
-  status?: string;
-  restaurant?: { id: string; name: string; };
-  deliveryMethod?: string;
+  status: string;
+  order?: any;
 }
 
-interface StatusMessage {
-  message: string;
-  details?: string;
-}
+export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({ status, order }) => {
+  const { assignmentStatus, isWaitingForRestaurant, hasAcceptedRestaurant } = useOrderAssignmentStatus(order?.id);
 
-export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({ 
-  order, 
-  assignmentStatus,
-  status,
-  restaurant,
-  deliveryMethod
-}) => {
-  // Use order properties or fallback to direct props for backward compatibility
-  const orderStatus = status || order?.status;
-  const orderRestaurant = restaurant || order?.restaurant;
-  const orderDeliveryMethod = deliveryMethod || order?.delivery_method;
+  const getStatusConfig = () => {
+    // Handle the new multi-restaurant assignment statuses
+    if (isWaitingForRestaurant) {
+      return {
+        icon: <Search className="h-6 w-6 text-blue-500 animate-pulse" />,
+        title: "Finding Restaurant",
+        message: `We're contacting ${assignmentStatus?.assignmentCount || 0} nearby restaurants for your order. Please wait while restaurants review your request.`,
+        bgColor: "bg-blue-50",
+        textColor: "text-blue-800"
+      };
+    }
 
-  // Only show restaurant name if a restaurant has actually accepted the order
-  const shouldShowRestaurantName = 
-    assignmentStatus?.restaurant_name && 
-    assignmentStatus?.assigned_restaurant_id && 
-    orderStatus !== 'pending' && 
-    orderStatus !== 'awaiting_restaurant' && 
-    assignmentStatus?.status !== 'awaiting_response';
+    if (hasAcceptedRestaurant) {
+      return {
+        icon: <CheckCircle className="h-6 w-6 text-green-500" />,
+        title: "Restaurant Confirmed",
+        message: `Great! ${assignmentStatus?.restaurantName} has accepted your order and is now preparing your food.`,
+        bgColor: "bg-green-50",
+        textColor: "text-green-800"
+      };
+    }
 
-  const getStatusMessage = (): StatusMessage => {
-    if (!orderStatus) return { message: '' };
-    
-    switch (orderStatus) {
+    // Handle traditional statuses
+    switch (status) {
       case 'pending':
         return {
-          message: 'Finding a restaurant to fulfill your order...',
-          details: assignmentStatus?.attempt_count ? 
-            `Attempt ${assignmentStatus.attempt_count} of 3` : undefined
+          icon: <Clock className="h-6 w-6 text-yellow-500" />,
+          title: "Order Received",
+          message: "Your order has been received and is being processed.",
+          bgColor: "bg-yellow-50",
+          textColor: "text-yellow-800"
         };
-      case 'awaiting_restaurant':
+
+      case 'confirmed':
+      case 'restaurant_accepted':
         return {
-          message: shouldShowRestaurantName ? 
-            `Waiting for confirmation from ${assignmentStatus.restaurant_name}...` :
-            'Waiting for a restaurant to accept your order...',
-          details: `Attempt ${assignmentStatus?.attempt_count || 1} of 3`
+          icon: <CheckCircle className="h-6 w-6 text-green-500" />,
+          title: "Order Confirmed",
+          message: "Your order has been confirmed and the restaurant is preparing your food.",
+          bgColor: "bg-green-50",
+          textColor: "text-green-800"
         };
-      case 'processing':
-        return { 
-          message: shouldShowRestaurantName ? 
-            `Your order is being prepared by ${assignmentStatus.restaurant_name}!` : 
-            'Your order is being prepared!' 
-        };
-      case 'assignment_failed':
+
+      case 'preparing':
         return {
-          message: 'No nearby restaurants available at the moment.',
-          details: 'Please try again later.'
+          icon: <Clock className="h-6 w-6 text-blue-500" />,
+          title: "Preparing Your Order",
+          message: "The restaurant is currently preparing your delicious meal.",
+          bgColor: "bg-blue-50",
+          textColor: "text-blue-800"
         };
-      case 'on_the_way':
-        return { message: 'Your order is on the way to you!' };
+
+      case 'ready':
+        return {
+          icon: <CheckCircle className="h-6 w-6 text-green-500" />,
+          title: "Order Ready",
+          message: "Your order is ready and waiting for pickup by our delivery driver.",
+          bgColor: "bg-green-50",
+          textColor: "text-green-800"
+        };
+
+      case 'in_transit':
+      case 'out_for_delivery':
+        return {
+          icon: <Clock className="h-6 w-6 text-blue-500" />,
+          title: "On the Way",
+          message: "Your order is on its way to you! The driver will arrive soon.",
+          bgColor: "bg-blue-50",
+          textColor: "text-blue-800"
+        };
+
       case 'delivered':
-        return { message: 'Your order has been delivered. Enjoy!' };
-      case 'cancelled':
-        return { message: 'Your order has been cancelled.' };
+      case 'completed':
+        return {
+          icon: <CheckCircle className="h-6 w-6 text-green-500" />,
+          title: "Order Delivered",
+          message: "Your order has been successfully delivered. Enjoy your meal!",
+          bgColor: "bg-green-50",
+          textColor: "text-green-800"
+        };
+
       case 'no_restaurant_accepted':
         return {
-          message: 'No restaurants available in your area.',
-          details: 'Please try a different delivery address or try again later.'
+          icon: <XCircle className="h-6 w-6 text-red-500" />,
+          title: "No Restaurant Available",
+          message: "Unfortunately, no restaurants in your area are available to fulfill your order right now. Please try again later.",
+          bgColor: "bg-red-50",
+          textColor: "text-red-800"
         };
-      case 'no_restaurants_available':
+
+      case 'no_restaurant_available':
         return {
-          message: 'No restaurants available in your area.',
-          details: 'Please try a different delivery address or try again later.'
+          icon: <AlertTriangle className="h-6 w-6 text-orange-500" />,
+          title: "No Restaurants in Area",
+          message: "We couldn't find any restaurants in your delivery area. Please check your address or try a different location.",
+          bgColor: "bg-orange-50",
+          textColor: "text-orange-800"
         };
+
+      case 'cancelled':
+        return {
+          icon: <XCircle className="h-6 w-6 text-red-500" />,
+          title: "Order Cancelled",
+          message: "Your order has been cancelled.",
+          bgColor: "bg-red-50",
+          textColor: "text-red-800"
+        };
+
       default:
-        return { message: `Order Status: ${orderStatus}` };
+        return {
+          icon: <Clock className="h-6 w-6 text-gray-500" />,
+          title: "Processing Order",
+          message: "Your order is being processed.",
+          bgColor: "bg-gray-50",
+          textColor: "text-gray-800"
+        };
     }
   };
 
-  const statusMessage = getStatusMessage();
+  const config = getStatusConfig();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start gap-2">
-        {shouldShowRestaurantName && (
-          <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
-        )}
-        <div className="w-full">
-          <p className="text-lg">{statusMessage.message}</p>
-          {statusMessage.details && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm text-gray-400">
-                <span>{statusMessage.details}</span>
-              </div>
+    <div className={`rounded-lg p-4 ${config.bgColor} border`}>
+      <div className="flex items-start space-x-3">
+        {config.icon}
+        <div className="flex-1">
+          <h3 className={`font-semibold ${config.textColor}`}>
+            {config.title}
+          </h3>
+          <p className={`mt-1 text-sm ${config.textColor}`}>
+            {config.message}
+          </p>
+          
+          {/* Show assignment details when waiting for restaurant */}
+          {isWaitingForRestaurant && assignmentStatus && (
+            <div className="mt-2 text-xs text-blue-600">
+              {assignmentStatus.pendingCount > 0 && (
+                <div>• {assignmentStatus.pendingCount} restaurants reviewing</div>
+              )}
+              {assignmentStatus.rejectedCount > 0 && (
+                <div>• {assignmentStatus.rejectedCount} restaurants declined</div>
+              )}
             </div>
           )}
         </div>

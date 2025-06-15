@@ -2,7 +2,7 @@
 import React from 'react';
 
 // Define OrderStatus directly since the import failed
-type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'in_transit' | 'delivered' | 'completed' | 'cancelled';
+type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'in_transit' | 'delivered' | 'completed' | 'cancelled' | 'awaiting_restaurant' | 'restaurant_accepted' | 'no_restaurant_accepted' | 'no_restaurant_available';
 
 import { OrderStatusMessage } from './status/OrderStatusMessage';
 import { OrderStatusTimeline } from './OrderStatusTimeline';
@@ -13,14 +13,14 @@ interface OrderStatusDisplayProps {
   status: OrderStatus;
   orderId: string;
   estimatedTime?: string | Date;
-  order?: any; // Add order prop to fix the error
+  order?: any;
 }
 
 const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   status,
   orderId,
   estimatedTime,
-  order // Added order prop
+  order
 }) => {
   return (
     <div className="order-status-display p-4">
@@ -28,11 +28,11 @@ const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
       
       <OrderStatusTimeline status={status} orderId={orderId} />
       
-      {estimatedTime && status !== 'completed' && status !== 'cancelled' && (
+      {estimatedTime && status !== 'completed' && status !== 'cancelled' && status !== 'delivered' && (
         <OrderTimer estimatedTime={estimatedTime} />
       )}
       
-      {(status === 'pending' || status === 'confirmed') && (
+      {(status === 'pending' || status === 'awaiting_restaurant') && (
         <CancelOrderButton orderId={orderId} />
       )}
     </div>

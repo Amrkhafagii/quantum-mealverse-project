@@ -1,6 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { RestaurantAssignment } from '@/types/notifications';
 import { PreparationStageService } from '@/services/preparation/preparationStageService';
+import { MultiRestaurantAssignmentService } from './MultiRestaurantAssignmentService';
 
 export class AssignmentService {
   // Get pending assignments for a restaurant
@@ -41,7 +43,7 @@ export class AssignmentService {
     }));
   }
 
-  // Accept an order assignment
+  // Accept an order assignment using the new multi-restaurant service
   async acceptAssignment(assignmentId: string, notes?: string): Promise<void> {
     console.log('Accepting assignment:', assignmentId, 'with notes:', notes);
     
@@ -57,33 +59,23 @@ export class AssignmentService {
       throw new Error('Failed to fetch assignment details');
     }
 
-    // Update the assignment status
-    const { error } = await supabase
-      .from('restaurant_assignments')
-      .update({
-        status: 'accepted',
-        responded_at: new Date().toISOString(),
-        response_notes: notes
-      })
-      .eq('id', assignmentId);
+    // Use multi-restaurant service to handle acceptance
+    const success = await MultiRestaurantAssignmentService.handleRestaurantAcceptance(
+      assignmentId,
+      assignment.order_id,
+      assignment.restaurant_id
+    );
 
-    if (error) {
-      console.error('Error accepting assignment:', error);
-      throw error;
+    if (!success) {
+      throw new Error('Failed to accept assignment');
     }
 
-    // Update order status
-    const { error: orderUpdateError } = await supabase
-      .from('orders')
-      .update({
-        status: 'restaurant_accepted',
-        restaurant_id: assignment.restaurant_id
-      })
-      .eq('id', assignment.order_id);
-
-    if (orderUpdateError) {
-      console.error('Error updating order status:', orderUpdateError);
-      throw orderUpdateError;
+    // Update assignment with notes if provided
+    if (notes) {
+      await supabase
+        .from('restaurant_assignments')
+        .update({ response_notes: notes })
+        .eq('id', assignmentId);
     }
 
     // Initialize preparation stages for the accepted order
@@ -110,32 +102,37 @@ export class AssignmentService {
         }
       } else {
         console.error('Failed to create preparation stages');
-        // Don't throw error here to avoid breaking the assignment acceptance
-        // The order is still accepted, just without preparation tracking
       }
     } catch (stageError) {
       console.error('Error initializing preparation stages:', stageError);
-      // Log the error but don't fail the assignment acceptance
-      // The restaurant can manually create stages if needed
     }
   }
 
-  // Reject an order assignment
+  // Reject an order assignment using the new multi-restaurant service
   async rejectAssignment(assignmentId: string, reason?: string): Promise<void> {
     console.log('Rejecting assignment:', assignmentId, 'with reason:', reason);
     
-    const { error } = await supabase
+    // Get assignment details first
+    const { data: assignment, error: fetchError } = await supabase
       .from('restaurant_assignments')
-      .update({
-        status: 'rejected',
-        responded_at: new Date().toISOString(),
-        response_notes: reason
-      })
-      .eq('id', assignmentId);
+      .select('order_id')
+      .eq('id', assignmentId)
+      .single();
 
-    if (error) {
-      console.error('Error rejecting assignment:', error);
-      throw error;
+    if (fetchError || !assignment) {
+      console.error('Error fetching assignment details:', fetchError);
+      throw new Error('Failed to fetch assignment details');
+    }
+
+    // Use multi-restaurant service to handle rejection
+    const success = await MultiRestaurantAssignmentService.handleRestaurantRejection(
+      assignmentId,
+      assignment.order_id,
+      reason
+    );
+
+    if (!success) {
+      throw new Error('Failed to reject assignment');
     }
   }
 
@@ -145,7 +142,7 @@ export class AssignmentService {
       .from('restaurant_assignments')
       .select('*')
       .eq('restaurant_id', restaurantId)
-      .in('status', ['accepted', 'rejected', 'expired'])
+      .in('status', ['accepted', 'rejected', 'expired', 'cancelled'])
       .order('responded_at', { ascending: false })
       .limit(limit);
 
