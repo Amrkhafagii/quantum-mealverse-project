@@ -1,6 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutRecommendation } from '@/types/fitness';
-import { Json } from '@/types/database';
+import { WorkoutRecommendation } from '@/types/fitness/recommendations';
 
 /**
  * Gets personalized workout recommendations for a user
@@ -20,13 +20,31 @@ export const getWorkoutRecommendations = async (userId: string): Promise<{
     if (error) throw error;
     
     // Transform the data to match our types
-    // Adding a name field that references title since our components expect it
     const transformedData = data?.map(item => ({
-      ...item,
-      name: item.title || 'Workout Recommendation'
-    }));
+      id: item.id,
+      user_id: item.workout_recommendations_user_id,
+      title: item.title || 'Workout Recommendation',
+      description: item.description || '',
+      type: item.type || 'general',
+      reason: item.reason || 'Based on your fitness profile',
+      confidence_score: item.confidence_score || 0.75,
+      metadata: item.metadata || {},
+      suggested_at: item.suggested_at || new Date().toISOString(),
+      applied: item.applied || false,
+      applied_at: item.applied_at || '',
+      dismissed: item.dismissed || false,
+      dismissed_at: item.dismissed_at || '',
+      expires_at: item.expires_at || '',
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString(),
+      // Legacy compatibility
+      difficulty: 'beginner' as const,
+      duration_minutes: 30,
+      target_muscle_groups: ['full body'],
+      recommended_frequency: 3
+    })) as WorkoutRecommendation[];
     
-    return { data: transformedData as WorkoutRecommendation[], error: null };
+    return { data: transformedData, error: null };
   } catch (error) {
     console.error('Error fetching workout recommendations:', error);
     return { data: null, error };
@@ -53,11 +71,30 @@ export const getTrendingWorkoutRecommendations = async (): Promise<{
     
     // Transform the data to match our types
     const transformedData = data?.map(item => ({
-      ...item,
-      name: item.title || 'Trending Workout'
-    }));
+      id: item.id,
+      user_id: item.workout_recommendations_user_id,
+      title: item.title || 'Trending Workout',
+      description: item.description || '',
+      type: item.type || 'general',
+      reason: item.reason || 'Popular with other users',
+      confidence_score: item.confidence_score || 0.75,
+      metadata: item.metadata || {},
+      suggested_at: item.suggested_at || new Date().toISOString(),
+      applied: item.applied || false,
+      applied_at: item.applied_at || '',
+      dismissed: item.dismissed || false,
+      dismissed_at: item.dismissed_at || '',
+      expires_at: item.expires_at || '',
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString(),
+      // Legacy compatibility
+      difficulty: 'beginner' as const,
+      duration_minutes: 30,
+      target_muscle_groups: ['full body'],
+      recommended_frequency: 3
+    })) as WorkoutRecommendation[];
     
-    return { data: transformedData as WorkoutRecommendation[], error: null };
+    return { data: transformedData, error: null };
   } catch (error) {
     console.error('Error fetching trending workout recommendations:', error);
     return { data: null, error };
@@ -136,7 +173,7 @@ export const createWorkoutRecommendation = async (
     
     const newRecommendation = {
       id: crypto.randomUUID(),
-      user_id: userId,
+      workout_recommendations_user_id: userId,
       title: recommendation.title || 'Workout Recommendation',
       description: recommendation.description || '',
       type: recommendation.type || 'general',
@@ -154,13 +191,32 @@ export const createWorkoutRecommendation = async (
       
     if (error) throw error;
     
-    // Add name for UI compatibility
+    // Transform result to match interface
     const result = {
-      ...data[0],
-      name: data[0].title || 'Workout Recommendation'
-    };
+      id: data[0].id,
+      user_id: data[0].workout_recommendations_user_id,
+      title: data[0].title,
+      description: data[0].description || '',
+      type: data[0].type,
+      reason: data[0].reason || '',
+      confidence_score: data[0].confidence_score || 0.75,
+      metadata: data[0].metadata || {},
+      suggested_at: data[0].suggested_at,
+      applied: data[0].applied,
+      applied_at: data[0].applied_at || '',
+      dismissed: data[0].dismissed,
+      dismissed_at: data[0].dismissed_at || '',
+      expires_at: data[0].expires_at || '',
+      created_at: data[0].created_at,
+      updated_at: data[0].updated_at,
+      // Legacy compatibility
+      difficulty: 'beginner' as const,
+      duration_minutes: 30,
+      target_muscle_groups: ['full body'],
+      recommended_frequency: 3
+    } as WorkoutRecommendation;
     
-    return { data: result as WorkoutRecommendation, error: null };
+    return { data: result, error: null };
   } catch (error) {
     console.error('Error creating workout recommendation:', error);
     return { data: null, error };
@@ -184,8 +240,27 @@ export const getUserRecommendations = async (userId: string) => {
     }
 
     return data?.map(item => ({
-      ...item,
-      name: item.title || 'Workout Recommendation' // Ensure name is set from title
+      id: item.id,
+      user_id: item.workout_recommendations_user_id,
+      title: item.title || 'Workout Recommendation',
+      description: item.description || '',
+      type: item.type || 'general',
+      reason: item.reason || 'Based on your fitness profile',
+      confidence_score: item.confidence_score || 0.75,
+      metadata: item.metadata || {},
+      suggested_at: item.suggested_at || new Date().toISOString(),
+      applied: item.applied || false,
+      applied_at: item.applied_at || '',
+      dismissed: item.dismissed || false,
+      dismissed_at: item.dismissed_at || '',
+      expires_at: item.expires_at || '',
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString(),
+      // Legacy compatibility
+      difficulty: 'beginner' as const,
+      duration_minutes: 30,
+      target_muscle_groups: ['full body'],
+      recommended_frequency: 3
     })) || [];
   } catch (error) {
     console.error('Error fetching workout recommendations:', error);

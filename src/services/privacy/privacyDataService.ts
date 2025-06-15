@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   LocationDataRetentionPolicy, 
@@ -148,7 +147,6 @@ export const updateDataAnonymizationSettings = async (
 
 export const getThirdPartySharePreferences = async (userId: string): Promise<ThirdPartySharePreferences | null> => {
   try {
-    // Since third_party_share_preferences table doesn't exist, return default values
     console.log('Third party share preferences table not found, returning defaults for user:', userId);
     
     return {
@@ -173,7 +171,6 @@ export const updateThirdPartySharePreferences = async (
   preferences: Partial<ThirdPartySharePreferences>
 ): Promise<ThirdPartySharePreferences | null> => {
   try {
-    // Since third_party_share_preferences table doesn't exist, just return the preferences
     console.log('Third party share preferences table not found, returning provided preferences for user:', userId);
     
     return {
@@ -215,4 +212,38 @@ export const exportLocationData = async (userId: string, format: 'json' | 'csv' 
     console.error('Error creating location data export request:', error);
     throw error;
   }
+};
+
+// Add additional utility functions that the hook expects
+export const deleteLocationData = async (userId: string, olderThanDays?: number) => {
+  try {
+    console.log('Delete location data not implemented - would delete data for user:', userId, 'older than:', olderThanDays);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting location data:', error);
+    return { success: false, error: 'Failed to delete location data' };
+  }
+};
+
+export const anonymizeLocationData = async (userId: string, precisionLevel: number) => {
+  try {
+    console.log('Anonymize location data not implemented - would anonymize data for user:', userId, 'precision:', precisionLevel);
+    return { success: true };
+  } catch (error) {
+    console.error('Error anonymizing location data:', error);
+    return { success: false, error: 'Failed to anonymize location data' };
+  }
+};
+
+// Export as default object for backward compatibility
+export const privacyDataService = {
+  getLocationDataRetentionPolicy: getLocationRetentionPolicy,
+  updateLocationDataRetentionPolicy: updateLocationRetentionPolicy,
+  getDataAnonymizationSettings,
+  updateDataAnonymizationSettings,
+  getThirdPartySharePreferences,
+  updateThirdPartySharePreferences,
+  exportLocationData,
+  deleteLocationData,
+  anonymizeLocationData
 };

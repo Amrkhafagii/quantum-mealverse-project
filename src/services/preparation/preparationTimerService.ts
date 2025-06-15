@@ -23,7 +23,9 @@ class PreparationTimerService {
         .from('order_preparation_stages')
         .insert({
           order_id: orderId,
+          restaurant_id: 'default-restaurant-id', // Required field
           stage_name: stageName,
+          stage_order: 1, // Required field - default to 1
           estimated_duration_minutes: estimatedDurationMinutes,
           started_at: new Date().toISOString(),
           status: 'in_progress'

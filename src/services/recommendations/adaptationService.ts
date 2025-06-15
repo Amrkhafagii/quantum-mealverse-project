@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface WorkoutAdaptation {
   id: string;
-  user_id: string; // Changed from number to string (UUID)
+  user_id: string; // This maps to workout_adaptations_user_id in DB
   workout_plan_id?: string;
   exercise_name?: string;
   adaptation_type: 'increase_weight' | 'decrease_weight' | 'increase_reps' | 'decrease_reps' | 'increase_sets' | 'decrease_sets' | 'substitute_exercise' | 'add_rest';
@@ -18,7 +18,7 @@ export const createWorkoutAdaptation = async (adaptation: Omit<WorkoutAdaptation
   const { data, error } = await supabase
     .from('workout_adaptations')
     .insert({
-      user_id: adaptation.user_id, // Now expects UUID string
+      workout_adaptations_user_id: adaptation.user_id, // Use correct DB field name
       workout_plan_id: adaptation.workout_plan_id,
       exercise_name: adaptation.exercise_name,
       adaptation_type: adaptation.adaptation_type,
@@ -38,11 +38,24 @@ export const getUserAdaptations = async (userId: string) => {
   const { data, error } = await supabase
     .from('workout_adaptations')
     .select('*')
-    .eq('workout_adaptations_user_id', userId) // Now expects UUID string
+    .eq('workout_adaptations_user_id', userId) // Use correct DB field name
     .order('applied_at', { ascending: false });
 
   if (error) throw error;
-  return data as WorkoutAdaptation[];
+  
+  // Map DB fields to interface
+  return (data || []).map(item => ({
+    id: item.id,
+    user_id: item.workout_adaptations_user_id,
+    workout_plan_id: item.workout_plan_id,
+    exercise_name: item.exercise_name,
+    adaptation_type: item.adaptation_type,
+    old_value: item.old_value,
+    new_value: item.new_value,
+    reason: item.reason,
+    applied_at: item.applied_at,
+    created_at: item.created_at
+  })) as WorkoutAdaptation[];
 };
 
 export const analyzePerformanceAndSuggestAdaptations = async (userId: string) => {
@@ -50,7 +63,7 @@ export const analyzePerformanceAndSuggestAdaptations = async (userId: string) =>
   const { data: progressData, error } = await supabase
     .from('exercise_progress')
     .select('*')
-    .eq('exercise_progress_user_id', userId) // Now expects UUID string
+    .eq('exercise_progress_user_id', userId) // Use correct DB field name
     .gte('recorded_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     .order('recorded_date', { ascending: false });
 
@@ -78,7 +91,7 @@ export const analyzePerformanceAndSuggestAdaptations = async (userId: string) =>
       
       if (weightVariation < avgWeight * 0.05) { // Less than 5% variation suggests plateau
         adaptations.push({
-          user_id: userId, // Now expects UUID string
+          user_id: userId,
           exercise_name: exerciseName,
           adaptation_type: 'increase_weight',
           old_value: { weight: avgWeight },
