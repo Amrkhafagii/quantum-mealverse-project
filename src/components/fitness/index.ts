@@ -32,3 +32,9 @@ export { default as EnhancedFitnessProfile } from './enhanced/EnhancedFitnessPro
 
 // Exercise Library (named export)
 export { ExerciseLibrary } from './ExerciseLibrary';
+
+// New Workout System Components
+export { WorkoutTemplateSelector } from './WorkoutTemplateSelector';
+export { default as SmartWorkoutRecommendations } from './SmartWorkoutRecommendations';
+export { default as WorkoutProgress } from './WorkoutProgress';
+export { default as ProgressAnalytics as NewProgressAnalytics } from './ProgressAnalytics';

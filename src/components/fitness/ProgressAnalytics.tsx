@@ -1,222 +1,325 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserMeasurement } from '@/types/fitness/profile';
-import ProgressChart from './ProgressChart';
-import { format, subMonths } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { TrendingUp, TrendingDown, Target, Calendar, Dumbbell, Clock } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
-interface ProgressAnalyticsProps {
-  userId?: string;
-  measurements?: UserMeasurement[];
+interface ProgressData {
+  date: string;
+  weight: number;
+  reps: number;
+  volume: number;
 }
 
-const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userId, measurements = [] }) => {
-  const [timeframe, setTimeframe] = useState<'1m' | '3m' | '6m' | '1y' | 'all'>('3m');
-  const [filteredMeasurements, setFilteredMeasurements] = useState<UserMeasurement[]>([]);
-  
-  useEffect(() => {
-    if (measurements.length === 0) return;
-    
-    const now = new Date();
-    let cutoffDate: Date;
-    
-    switch (timeframe) {
-      case '1m':
-        cutoffDate = subMonths(now, 1);
-        break;
-      case '3m':
-        cutoffDate = subMonths(now, 3);
-        break;
-      case '6m':
-        cutoffDate = subMonths(now, 6);
-        break;
-      case '1y':
-        cutoffDate = subMonths(now, 12);
-        break;
-      default:
-        // "all" timeframe - no filtering
-        setFilteredMeasurements([...measurements].sort((a, b) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        ));
-        return;
-    }
-    
-    const filtered = measurements.filter(m => 
-      new Date(m.date) >= cutoffDate
-    ).sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    
-    setFilteredMeasurements(filtered);
-  }, [measurements, timeframe]);
+interface ExerciseProgress {
+  exercise_name: string;
+  data: ProgressData[];
+  trend: 'up' | 'down' | 'stable';
+  improvement: number;
+}
 
-  // Calculate changes
-  const getChange = (property: keyof UserMeasurement) => {
-    if (filteredMeasurements.length < 2) return null;
-    
-    const oldest = filteredMeasurements[0][property] as number;
-    const newest = filteredMeasurements[filteredMeasurements.length - 1][property] as number;
-    
-    if (typeof oldest !== 'number' || typeof newest !== 'number') return null;
-    return newest - oldest;
+export const ProgressAnalytics: React.FC = () => {
+  const { user } = useAuth();
+  const [exerciseProgress, setExerciseProgress] = useState<ExerciseProgress[]>([]);
+  const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('month');
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalWorkouts: 0,
+    avgDuration: 0,
+    bestStreak: 0,
+    volumeIncrease: 0
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchProgressData();
+      fetchWorkoutStats();
+    }
+  }, [user, timeRange]);
+
+  const fetchProgressData = async () => {
+    if (!user) return;
+
+    try {
+      const startDate = getStartDate();
+      
+      const { data, error } = await supabase
+        .from('exercise_progress')
+        .select('*')
+        .eq('exercise_progress_user_id', user.id)
+        .gte('recorded_date', startDate)
+        .order('recorded_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Group by exercise and calculate trends
+      const grouped = groupByExercise(data || []);
+      setExerciseProgress(grouped);
+      
+      if (grouped.length > 0 && !selectedExercise) {
+        setSelectedExercise(grouped[0].exercise_name);
+      }
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  const weightChange = getChange('weight');
-  const bodyFatChange = getChange('body_fat');
-  const waistChange = getChange('waist');
-  
-  const renderChangeValue = (value: number | null, unit: string) => {
-    if (value === null) return 'No data';
-    
-    const formattedValue = Math.abs(value).toFixed(1);
-    const prefix = value > 0 ? '+' : value < 0 ? '-' : '';
-    return `${prefix}${formattedValue}${unit}`;
+
+  const fetchWorkoutStats = async () => {
+    if (!user) return;
+
+    try {
+      const { data: workoutStats } = await supabase
+        .from('user_workout_stats')
+        .select('*')
+        .eq('user_workout_stats_user_id', user.id)
+        .single();
+
+      const { data: recentLogs } = await supabase
+        .from('workout_logs')
+        .select('duration')
+        .eq('workout_logs_user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(10);
+
+      const avgDuration = recentLogs?.length 
+        ? Math.round(recentLogs.reduce((sum, log) => sum + log.duration, 0) / recentLogs.length)
+        : 0;
+
+      setStats({
+        totalWorkouts: workoutStats?.total_workouts || 0,
+        avgDuration,
+        bestStreak: workoutStats?.streak_days || 0,
+        volumeIncrease: 15 // Placeholder calculation
+      });
+    } catch (error) {
+      console.error('Error fetching workout stats:', error);
+    }
   };
-  
-  const getChangeClass = (value: number | null, isPositiveGood = false) => {
-    if (value === null) return 'text-gray-400';
-    
-    // For weight and waist, negative is generally considered good
-    // For muscle measurements, positive is generally considered good
-    const isGood = isPositiveGood ? value > 0 : value < 0;
-    
-    return isGood ? 'text-green-400' : value === 0 ? 'text-gray-300' : 'text-red-400';
+
+  const getStartDate = () => {
+    const now = new Date();
+    switch (timeRange) {
+      case 'week':
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      case 'month':
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      case 'quarter':
+        return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      default:
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    }
   };
+
+  const groupByExercise = (data: any[]): ExerciseProgress[] => {
+    const grouped = data.reduce((acc, entry) => {
+      if (!acc[entry.exercise_name]) {
+        acc[entry.exercise_name] = [];
+      }
+      acc[entry.exercise_name].push({
+        date: new Date(entry.recorded_date).toLocaleDateString(),
+        weight: entry.max_weight || 0,
+        reps: entry.max_reps || 0,
+        volume: entry.total_volume || 0
+      });
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([exercise, progressData]: [string, any]) => {
+      const sortedData = progressData.sort((a: any, b: any) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      
+      const trend = calculateTrend(sortedData);
+      const improvement = calculateImprovement(sortedData);
+      
+      return {
+        exercise_name: exercise,
+        data: sortedData,
+        trend,
+        improvement
+      };
+    });
+  };
+
+  const calculateTrend = (data: ProgressData[]): 'up' | 'down' | 'stable' => {
+    if (data.length < 2) return 'stable';
+    
+    const first = data[0].volume;
+    const last = data[data.length - 1].volume;
+    
+    if (last > first * 1.05) return 'up';
+    if (last < first * 0.95) return 'down';
+    return 'stable';
+  };
+
+  const calculateImprovement = (data: ProgressData[]): number => {
+    if (data.length < 2) return 0;
+    
+    const first = data[0].volume;
+    const last = data[data.length - 1].volume;
+    
+    return Math.round(((last - first) / first) * 100);
+  };
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case 'up': return <TrendingUp className="w-4 h-4 text-green-500" />;
+      case 'down': return <TrendingDown className="w-4 h-4 text-red-500" />;
+      default: return <Target className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const selectedData = exerciseProgress.find(ep => ep.exercise_name === selectedExercise)?.data || [];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-quantum-cyan"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <Card className="bg-quantum-darkBlue/30 border border-quantum-cyan/20">
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold text-quantum-cyan">Progress Analytics</CardTitle>
-            <Tabs value={timeframe} onValueChange={(v) => setTimeframe(v as any)} className="max-w-xs">
-              <TabsList className="bg-quantum-black/50">
-                <TabsTrigger value="1m">1M</TabsTrigger>
-                <TabsTrigger value="3m">3M</TabsTrigger>
-                <TabsTrigger value="6m">6M</TabsTrigger>
-                <TabsTrigger value="1y">1Y</TabsTrigger>
-                <TabsTrigger value="all">All</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredMeasurements.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-gray-400">No measurement data available for this timeframe</p>
-              <p className="text-gray-500 text-sm mt-2">Add measurements to see your progress</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Card className="bg-quantum-black/50 border border-quantum-purple/20">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <p className="text-gray-400 mb-1">Weight Change</p>
-                      <p className={`text-2xl font-bold ${getChangeClass(weightChange)}`}>
-                        {renderChangeValue(weightChange, ' kg')}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-quantum-black/50 border border-quantum-purple/20">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <p className="text-gray-400 mb-1">Body Fat Change</p>
-                      <p className={`text-2xl font-bold ${getChangeClass(bodyFatChange)}`}>
-                        {renderChangeValue(bodyFatChange, '%')}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-quantum-black/50 border border-quantum-purple/20">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <p className="text-gray-400 mb-1">Waist Change</p>
-                      <p className={`text-2xl font-bold ${getChangeClass(waistChange)}`}>
-                        {renderChangeValue(waistChange, ' cm')}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-2xl font-bold text-quantum-cyan">Progress Analytics</h2>
+        
+        <div className="flex gap-2">
+          {['week', 'month', 'quarter'].map((range) => (
+            <Button
+              key={range}
+              variant={timeRange === range ? 'default' : 'outline'}
+              onClick={() => setTimeRange(range as any)}
+              className="capitalize"
+            >
+              {range}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="holographic-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Workouts</p>
+                <p className="text-2xl font-bold text-quantum-cyan">{stats.totalWorkouts}</p>
               </div>
-              
-              <Tabs defaultValue="weight" className="mt-6">
-                <TabsList className="bg-quantum-black/50">
-                  <TabsTrigger value="weight">Weight</TabsTrigger>
-                  <TabsTrigger value="body_fat">Body Fat</TabsTrigger>
-                  <TabsTrigger value="measurements">Measurements</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="weight" className="mt-4">
-                  <ProgressChart 
-                    data={filteredMeasurements} 
-                    dataKey="weight"
-                    label="Weight (kg)"
-                    color="#4f46e5"
-                  />
-                </TabsContent>
-                
-                <TabsContent value="body_fat" className="mt-4">
-                  <ProgressChart 
-                    data={filteredMeasurements.filter(m => m.body_fat !== null && m.body_fat !== undefined)} 
-                    dataKey="body_fat"
-                    label="Body Fat (%)"
-                    color="#06b6d4"
-                  />
-                </TabsContent>
-                
-                <TabsContent value="measurements" className="mt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-sm font-medium mb-2 text-gray-400">Chest (cm)</h3>
-                      <ProgressChart 
-                        data={filteredMeasurements.filter(m => m.chest !== null && m.chest !== undefined)} 
-                        dataKey="chest"
-                        hideLabel
-                        color="#8b5cf6"
-                        height={180}
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium mb-2 text-gray-400">Waist (cm)</h3>
-                      <ProgressChart 
-                        data={filteredMeasurements.filter(m => m.waist !== null && m.waist !== undefined)} 
-                        dataKey="waist"
-                        hideLabel
-                        color="#ec4899"
-                        height={180}
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium mb-2 text-gray-400">Hips (cm)</h3>
-                      <ProgressChart 
-                        data={filteredMeasurements.filter(m => m.hips !== null && m.hips !== undefined)} 
-                        dataKey="hips"
-                        hideLabel
-                        color="#f59e0b"
-                        height={180}
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium mb-2 text-gray-400">Arms (cm)</h3>
-                      <ProgressChart 
-                        data={filteredMeasurements.filter(m => m.arms !== null && m.arms !== undefined)} 
-                        dataKey="arms"
-                        hideLabel
-                        color="#10b981"
-                        height={180}
-                      />
-                    </div>
+              <Dumbbell className="w-8 h-8 text-quantum-cyan opacity-60" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="holographic-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Avg Duration</p>
+                <p className="text-2xl font-bold text-quantum-cyan">{stats.avgDuration}m</p>
+              </div>
+              <Clock className="w-8 h-8 text-quantum-cyan opacity-60" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="holographic-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Best Streak</p>
+                <p className="text-2xl font-bold text-quantum-cyan">{stats.bestStreak}</p>
+              </div>
+              <Calendar className="w-8 h-8 text-quantum-cyan opacity-60" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="holographic-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Volume Increase</p>
+                <p className="text-2xl font-bold text-green-500">+{stats.volumeIncrease}%</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-green-500 opacity-60" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Exercise Progress */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Exercise List */}
+        <Card className="holographic-card">
+          <CardHeader>
+            <CardTitle className="text-lg">Exercise Progress</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {exerciseProgress.map((exercise) => (
+              <div
+                key={exercise.exercise_name}
+                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                  selectedExercise === exercise.exercise_name
+                    ? 'bg-quantum-cyan bg-opacity-10 border border-quantum-cyan'
+                    : 'hover:bg-gray-50'
+                }`}
+                onClick={() => setSelectedExercise(exercise.exercise_name)}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{exercise.exercise_name}</span>
+                  <div className="flex items-center gap-2">
+                    {getTrendIcon(exercise.trend)}
+                    <Badge variant={exercise.improvement > 0 ? 'default' : 'secondary'}>
+                      {exercise.improvement > 0 ? '+' : ''}{exercise.improvement}%
+                    </Badge>
                   </div>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Progress Chart */}
+        <Card className="holographic-card lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {selectedExercise} Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={selectedData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line 
+                    type="monotone" 
+                    dataKey="volume" 
+                    stroke="#00f5ff" 
+                    strokeWidth={2}
+                    dot={{ fill: '#00f5ff' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                No progress data available for this exercise
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

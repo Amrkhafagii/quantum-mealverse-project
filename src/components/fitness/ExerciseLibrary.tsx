@@ -1,289 +1,240 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { PullToRefresh } from '@/components/ui/pull-to-refresh';
-import { useExercises } from '@/hooks/useExercises';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import { Search, Filter, Play, Info } from 'lucide-react';
+import { Search, Filter, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Exercise } from '@/types/fitness/exercises';
 
-const ITEM_HEIGHT = 120;
-const BUFFER_SIZE = 5;
-
-interface VirtualizedListProps {
-  items: Exercise[];
-  onExerciseSelect: (exercise: Exercise) => void;
+interface ExerciseLibraryProps {
+  onSelectExercise?: (exercise: Exercise) => void;
+  mode?: 'browse' | 'select';
 }
 
-const VirtualizedExerciseList: React.FC<VirtualizedListProps> = ({ items, onExerciseSelect }) => {
-  const { isMobile } = useResponsive();
-  const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(600);
+const sampleExercises: Exercise[] = [
+  {
+    id: '1',
+    name: 'Push-ups',
+    target_muscle: 'chest',
+    sets: 3,
+    reps: 12,
+    rest: 60,
+    description: 'Classic bodyweight exercise for upper body strength',
+    muscle_groups: ['chest', 'shoulders', 'triceps'],
+    difficulty: 'beginner',
+    equipment_needed: ['bodyweight']
+  },
+  {
+    id: '2',
+    name: 'Squats',
+    target_muscle: 'legs',
+    sets: 3,
+    reps: 15,
+    rest: 90,
+    description: 'Fundamental lower body exercise',
+    muscle_groups: ['quadriceps', 'glutes', 'hamstrings'],
+    difficulty: 'beginner',
+    equipment_needed: ['bodyweight']
+  },
+  {
+    id: '3',
+    name: 'Deadlifts',
+    target_muscle: 'back',
+    sets: 3,
+    reps: 8,
+    rest: 120,
+    weight: 135,
+    description: 'Compound movement for posterior chain',
+    muscle_groups: ['hamstrings', 'glutes', 'back'],
+    difficulty: 'intermediate',
+    equipment_needed: ['barbell', 'weights']
+  },
+  {
+    id: '4',
+    name: 'Plank',
+    target_muscle: 'core',
+    sets: 3,
+    reps: '30-60 seconds',
+    rest: 45,
+    description: 'Isometric core strengthening exercise',
+    muscle_groups: ['core', 'shoulders'],
+    difficulty: 'beginner',
+    equipment_needed: ['bodyweight']
+  }
+];
 
-  const visibleRange = useMemo(() => {
-    const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER_SIZE);
-    const endIndex = Math.min(
-      items.length - 1,
-      Math.ceil((scrollTop + containerHeight) / ITEM_HEIGHT) + BUFFER_SIZE
-    );
-    return { startIndex, endIndex };
-  }, [scrollTop, containerHeight, items.length]);
+export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
+  onSelectExercise,
+  mode = 'browse'
+}) => {
+  const [exercises, setExercises] = useState<Exercise[]>(sampleExercises);
+  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>(exercises);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [muscleFilter, setMuscleFilter] = useState<string>('all');
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
 
-  const visibleItems = useMemo(() => {
-    return items.slice(visibleRange.startIndex, visibleRange.endIndex + 1);
-  }, [items, visibleRange]);
-
-  const totalHeight = items.length * ITEM_HEIGHT;
-
-  return (
-    <div
-      className="relative overflow-auto"
-      style={{ height: containerHeight }}
-      onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
-      ref={(el) => {
-        if (el) {
-          setContainerHeight(el.clientHeight || 600);
-        }
-      }}
-    >
-      <div style={{ height: totalHeight, position: 'relative' }}>
-        <div
-          style={{
-            transform: `translateY(${visibleRange.startIndex * ITEM_HEIGHT}px)`,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-          }}
-        >
-          {visibleItems.map((exercise, index) => (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              onSelect={onExerciseSelect}
-              isMobile={isMobile}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-interface ExerciseCardProps {
-  exercise: Exercise;
-  onSelect: (exercise: Exercise) => void;
-  isMobile: boolean;
-}
-
-const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onSelect, isMobile }) => {
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'bg-green-500';
-      case 'intermediate': return 'bg-yellow-500';
-      case 'advanced': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  return (
-    <Card 
-      className={`mb-3 transition-all duration-200 hover:shadow-lg cursor-pointer ${
-        isMobile ? 'mx-2' : ''
-      }`}
-      style={{ height: ITEM_HEIGHT - 12 }}
-      onClick={() => onSelect(exercise)}
-    >
-      <CardContent className="p-4 h-full flex items-center">
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-lg">{exercise.name}</h3>
-            <Badge className={getDifficultyColor(exercise.difficulty)}>
-              {exercise.difficulty}
-            </Badge>
-          </div>
-          
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-            {exercise.description || 'No description available'}
-          </p>
-          
-          <div className="flex flex-wrap gap-1">
-            {exercise.muscle_groups.slice(0, 3).map((group) => (
-              <Badge key={group} variant="outline" className="text-xs">
-                {group}
-              </Badge>
-            ))}
-            {exercise.muscle_groups.length > 3 && (
-              <Badge variant="outline" className="text-xs">
-                +{exercise.muscle_groups.length - 3} more
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        <div className="ml-4 flex gap-2">
-          {exercise.video_url && (
-            <Button size="sm" variant="outline">
-              <Play className="h-4 w-4" />
-            </Button>
-          )}
-          <Button size="sm" variant="outline">
-            <Info className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-export const ExerciseLibrary: React.FC = () => {
-  const { exercises, isLoading, fetchExercises, searchExercises, getExercisesByMuscleGroup, getExercisesByDifficulty } = useExercises();
-  const { isMobile, isTablet } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const muscleGroups = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'cardio'];
-  const difficulties = ['beginner', 'intermediate', 'advanced'];
-
-  const filteredExercises = useMemo(() => {
+  useEffect(() => {
     let filtered = exercises;
 
-    if (searchQuery) {
-      filtered = searchExercises(searchQuery);
-    }
-
-    if (selectedMuscleGroup) {
-      filtered = filtered.filter(exercise => 
-        exercise.muscle_groups.includes(selectedMuscleGroup)
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(exercise =>
+        exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exercise.target_muscle.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (selectedDifficulty) {
-      filtered = filtered.filter(exercise => 
-        exercise.difficulty === selectedDifficulty
+    // Apply muscle group filter
+    if (muscleFilter !== 'all') {
+      filtered = filtered.filter(exercise =>
+        exercise.target_muscle === muscleFilter ||
+        exercise.muscle_groups?.includes(muscleFilter)
       );
     }
 
-    return filtered;
-  }, [exercises, searchQuery, selectedMuscleGroup, selectedDifficulty, searchExercises]);
+    // Apply difficulty filter
+    if (difficultyFilter !== 'all') {
+      filtered = filtered.filter(exercise =>
+        exercise.difficulty === difficultyFilter
+      );
+    }
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await fetchExercises();
-    } finally {
-      setIsRefreshing(false);
+    setFilteredExercises(filtered);
+  }, [exercises, searchTerm, muscleFilter, difficultyFilter]);
+
+  const handleSelectExercise = (exercise: Exercise) => {
+    if (onSelectExercise) {
+      onSelectExercise(exercise);
     }
   };
 
-  const handleExerciseSelect = (exercise: Exercise) => {
-    // Handle exercise selection - could open modal, navigate, etc.
-    console.log('Selected exercise:', exercise);
-  };
-
-  const clearFilters = () => {
-    setSearchQuery('');
-    setSelectedMuscleGroup('');
-    setSelectedDifficulty('');
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'beginner': return 'bg-green-100 text-green-800';
+      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
+      case 'advanced': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} isRefreshing={isRefreshing}>
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Exercise Library
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search exercises..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                <span className="text-sm font-medium">Filters:</span>
-                {(selectedMuscleGroup || selectedDifficulty) && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    Clear All
-                  </Button>
-                )}
-              </div>
-
-              {/* Muscle Groups */}
-              <div>
-                <p className="text-xs text-gray-600 mb-2">Muscle Groups:</p>
-                <div className={`flex flex-wrap gap-2 ${isMobile ? 'max-h-24 overflow-y-auto' : ''}`}>
-                  {muscleGroups.map((group) => (
-                    <Badge
-                      key={group}
-                      variant={selectedMuscleGroup === group ? 'default' : 'outline'}
-                      className="cursor-pointer capitalize"
-                      onClick={() => setSelectedMuscleGroup(
-                        selectedMuscleGroup === group ? '' : group
-                      )}
-                    >
-                      {group}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Difficulty */}
-              <div>
-                <p className="text-xs text-gray-600 mb-2">Difficulty:</p>
-                <div className="flex gap-2">
-                  {difficulties.map((difficulty) => (
-                    <Badge
-                      key={difficulty}
-                      variant={selectedDifficulty === difficulty ? 'default' : 'outline'}
-                      className="cursor-pointer capitalize"
-                      onClick={() => setSelectedDifficulty(
-                        selectedDifficulty === difficulty ? '' : difficulty
-                      )}
-                    >
-                      {difficulty}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Results Count */}
-            <div className="flex justify-between items-center text-sm text-gray-600">
-              <span>{filteredExercises.length} exercises found</span>
-              {isLoading && <span>Loading...</span>}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Exercise List */}
-        <Card>
-          <CardContent className="p-0">
-            <VirtualizedExerciseList
-              items={filteredExercises}
-              onExerciseSelect={handleExerciseSelect}
+    <div className="space-y-6">
+      <div className="flex flex-col space-y-4">
+        <h2 className="text-2xl font-bold text-quantum-cyan">Exercise Library</h2>
+        
+        {/* Search and Filters */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search exercises..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
             />
-          </CardContent>
-        </Card>
+          </div>
+          
+          <Select value={muscleFilter} onValueChange={setMuscleFilter}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue placeholder="Muscle Group" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Muscles</SelectItem>
+              <SelectItem value="chest">Chest</SelectItem>
+              <SelectItem value="back">Back</SelectItem>
+              <SelectItem value="legs">Legs</SelectItem>
+              <SelectItem value="shoulders">Shoulders</SelectItem>
+              <SelectItem value="arms">Arms</SelectItem>
+              <SelectItem value="core">Core</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue placeholder="Difficulty" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="beginner">Beginner</SelectItem>
+              <SelectItem value="intermediate">Intermediate</SelectItem>
+              <SelectItem value="advanced">Advanced</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-    </PullToRefresh>
+
+      {/* Exercise Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredExercises.map((exercise) => (
+          <Card key={exercise.id} className="holographic-card hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-lg text-quantum-cyan">{exercise.name}</CardTitle>
+                <Badge className={getDifficultyColor(exercise.difficulty || 'beginner')}>
+                  {exercise.difficulty || 'beginner'}
+                </Badge>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-3">
+              <p className="text-sm text-gray-600">{exercise.description}</p>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Target:</span>
+                  <span className="font-medium capitalize">{exercise.target_muscle}</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Sets × Reps:</span>
+                  <span className="font-medium">{exercise.sets} × {exercise.reps}</span>
+                </div>
+                
+                {exercise.weight && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Weight:</span>
+                    <span className="font-medium">{exercise.weight} lbs</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Rest:</span>
+                  <span className="font-medium">{exercise.rest}s</span>
+                </div>
+              </div>
+
+              {exercise.muscle_groups && (
+                <div className="flex flex-wrap gap-1">
+                  {exercise.muscle_groups.map((muscle, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {muscle}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {mode === 'select' && (
+                <Button
+                  onClick={() => handleSelectExercise(exercise)}
+                  className="w-full cyber-button"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Exercise
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredExercises.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No exercises found matching your filters.</p>
+        </div>
+      )}
+    </div>
   );
 };

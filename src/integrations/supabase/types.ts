@@ -9915,6 +9915,7 @@ export type Database = {
           description: string | null
           difficulty: string
           duration_weeks: number | null
+          frequency: number | null
           frequency_per_week: number | null
           goal: string | null
           id: string
@@ -9929,6 +9930,7 @@ export type Database = {
           description?: string | null
           difficulty: string
           duration_weeks?: number | null
+          frequency?: number | null
           frequency_per_week?: number | null
           goal?: string | null
           id?: string
@@ -9943,6 +9945,7 @@ export type Database = {
           description?: string | null
           difficulty?: string
           duration_weeks?: number | null
+          frequency?: number | null
           frequency_per_week?: number | null
           goal?: string | null
           id?: string
