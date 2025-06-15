@@ -1,4 +1,6 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MealType } from '@/types/meal';
 import { Restaurant } from './useRestaurantsData';
@@ -14,16 +16,7 @@ export const useMenuData = (restaurants: Restaurant[]) => {
 
   const queryClient = useQueryClient();
 
-  // See React Query DevTools - helpful for debugging in dev
-  if (typeof window !== "undefined" && (window as any).__REACT_QUERY_DEVTOOLS_GLOBAL_HOOK__ === undefined) {
-    import('@tanstack/react-query-devtools').then((devtools) => {
-      if (devtools && devtools.ReactQueryDevtools) {
-        // Only inject ONCE
-        (window as any).__REACT_QUERY_DEVTOOLS_GLOBAL_HOOK__ = true;
-        devtools.ReactQueryDevtools({ initialIsOpen: true });
-      }
-    }).catch(() => {});
-  }
+  // Removed React Query DevTools dynamic import (not needed in hook)
 
   const queryResult = useQuery({
     queryKey: ['menuData', restaurantIds],
@@ -113,10 +106,9 @@ export const useMenuData = (restaurants: Restaurant[]) => {
       return transformedItems;
     },
     enabled: restaurantIds.length > 0,
-    staleTime: 1000 * 10, // 10s, you can increase/decrease for tests
-    cacheTime: 1000 * 60, // 1 min, keep cache short for live testing
+    staleTime: 1000 * 10, // 10s
     retry: 2, // Try twice before error
-    refetchOnWindowFocus: true, // Always attempt to keep up to date
+    refetchOnWindowFocus: true,
     onSuccess: (data) => {
       console.log('[useMenuData] Query success. Data:', data);
     },
@@ -144,3 +136,4 @@ export const useMenuData = (restaurants: Restaurant[]) => {
 
   return queryResult;
 };
+
