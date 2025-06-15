@@ -7,6 +7,8 @@ import { Trophy, Star, Target, Dumbbell, Award } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AchievementService } from '@/services/fitness/achievementService';
+import { useResponsive } from '@/contexts/ResponsiveContext';
+import { EnhancedResponsiveGrid } from '@/components/ui/enhanced-mobile-breakpoints';
 
 interface Achievement {
   id: string;
@@ -34,6 +36,7 @@ interface AchievementProgress {
 
 const EnhancedAchievements: React.FC = () => {
   const { user } = useAuth();
+  const { isMobile } = useResponsive();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [userAchievements, setUserAchievements] = useState<UserAchievementWithDetails[]>([]);
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([]);
@@ -88,11 +91,11 @@ const EnhancedAchievements: React.FC = () => {
 
   const getIconComponent = (iconName: string) => {
     switch (iconName) {
-      case 'trophy': return <Trophy className="w-6 h-6" />;
-      case 'star': return <Star className="w-6 h-6" />;
-      case 'target': return <Target className="w-6 h-6" />;
-      case 'dumbbell': return <Dumbbell className="w-6 h-6" />;
-      default: return <Award className="w-6 h-6" />;
+      case 'trophy': return <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />;
+      case 'star': return <Star className="w-5 h-5 sm:w-6 sm:h-6" />;
+      case 'target': return <Target className="w-5 h-5 sm:w-6 sm:h-6" />;
+      case 'dumbbell': return <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6" />;
+      default: return <Award className="w-5 h-5 sm:w-6 sm:h-6" />;
     }
   };
 
@@ -113,38 +116,42 @@ const EnhancedAchievements: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-quantum-cyan">Achievements</h2>
-        <Badge variant="secondary" className="text-lg px-3 py-1">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold text-quantum-cyan">Achievements</h2>
+        <Badge variant="secondary" className="text-sm sm:text-base px-3 py-1 w-fit">
           {userAchievements.length} / {achievements.length} Earned
         </Badge>
       </div>
 
       {/* Earned Achievements */}
       {userAchievements.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-white">Earned Achievements</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-3 sm:space-y-4">
+          <h3 className="text-lg sm:text-xl font-semibold text-white">Earned Achievements</h3>
+          <EnhancedResponsiveGrid 
+            cols={{ xs: 1, sm: 1, md: 2, lg: 3 }} 
+            gap="gap-3 sm:gap-4"
+          >
             {userAchievements.map((userAchievement) => (
               <Card key={userAchievement.id} className="holographic-card border-quantum-cyan">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="text-quantum-cyan">
+                    <div className="text-quantum-cyan flex-shrink-0">
                       {getIconComponent(userAchievement.achievement.icon)}
                     </div>
-                    <div>
-                      <CardTitle className="text-lg text-quantum-cyan">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-base sm:text-lg text-quantum-cyan truncate">
                         {userAchievement.achievement.name}
                       </CardTitle>
-                      <Badge className="bg-quantum-cyan text-white">
+                      <Badge className="bg-quantum-cyan text-white mt-1 text-xs">
                         {userAchievement.achievement.points} points
                       </Badge>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-300 mb-2">
+                <CardContent className="pt-0">
+                  <p className="text-sm text-gray-300 mb-2 line-clamp-2">
                     {userAchievement.achievement.description}
                   </p>
                   <p className="text-xs text-gray-400">
@@ -153,14 +160,17 @@ const EnhancedAchievements: React.FC = () => {
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </EnhancedResponsiveGrid>
         </div>
       )}
 
       {/* Available Achievements */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-white">Available Achievements</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-3 sm:space-y-4">
+        <h3 className="text-lg sm:text-xl font-semibold text-white">Available Achievements</h3>
+        <EnhancedResponsiveGrid 
+          cols={{ xs: 1, sm: 1, md: 2, lg: 3 }} 
+          gap="gap-3 sm:gap-4"
+        >
           {achievements
             .filter(achievement => !isAchievementEarned(achievement.id))
             .map((achievement) => {
@@ -172,26 +182,26 @@ const EnhancedAchievements: React.FC = () => {
                 <Card key={achievement.id} className="holographic-card border-gray-600">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
-                      <div className="text-gray-400">
+                      <div className="text-gray-400 flex-shrink-0">
                         {getIconComponent(achievement.icon)}
                       </div>
-                      <div>
-                        <CardTitle className="text-lg text-white">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base sm:text-lg text-white truncate">
                           {achievement.name}
                         </CardTitle>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="mt-1 text-xs">
                           {achievement.points} points
                         </Badge>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-300 mb-3">
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-gray-300 mb-3 line-clamp-2">
                       {achievement.description}
                     </p>
                     
                     {progress && (
-                      <div className="space-y-2">
+                      <div className="space-y-2 mb-3">
                         <div className="flex justify-between text-xs">
                           <span className="text-gray-400">Progress</span>
                           <span className="text-quantum-cyan">
@@ -202,14 +212,14 @@ const EnhancedAchievements: React.FC = () => {
                       </div>
                     )}
 
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-gray-500 line-clamp-2">
                       {achievement.criteria}
                     </p>
                   </CardContent>
                 </Card>
               );
             })}
-        </div>
+        </EnhancedResponsiveGrid>
       </div>
     </div>
   );

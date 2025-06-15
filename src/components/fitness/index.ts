@@ -51,3 +51,8 @@ export { default as EnhancedAchievements } from './EnhancedAchievements';
 
 // Workout Templates
 export { default as WorkoutTemplates } from './WorkoutTemplates';
+
+// New Responsive Components
+export { default as ResponsiveFitnessLayout } from './ResponsiveFitnessLayout';
+export { default as ResponsiveWorkoutHistory } from './ResponsiveWorkoutHistory';
+export { default as ResponsiveExerciseLibrary } from './ResponsiveExerciseLibrary';
