@@ -5,14 +5,24 @@ import { MealType } from '@/types/meal';
 import { Restaurant } from './useRestaurantsData';
 
 export const useMenuData = (restaurants: Restaurant[]) => {
+  // Filter restaurants with valid restaurant_id (string, not empty, not null)
+  const validRestaurants = (restaurants || []).filter(r => typeof r.restaurant_id === "string" && r.restaurant_id);
+  const restaurantIds = validRestaurants.map(r => r.restaurant_id);
+
+  // Extra log for debugging
+  console.log('[useMenuData] Received restaurants:', restaurants);
+  console.log('[useMenuData] Filtered valid restaurantIds:', restaurantIds);
+
   return useQuery({
-    queryKey: ['menuData', restaurants.map(r => r.restaurant_id)],
+    queryKey: ['menuData', restaurantIds],
     queryFn: async () => {
-      if (!restaurants.length) {
+      if (!restaurantIds.length) {
+        console.warn('[useMenuData] No valid restaurant IDs to query, returning empty result');
         return [];
       }
       
-      const restaurantIds = restaurants.map(restaurant => restaurant.restaurant_id);
+      // Debug before query
+      console.log('[useMenuData] Querying menu_items for restaurantIds:', restaurantIds);
       
       const { data: menuItems, error } = await supabase
         .from('menu_items')
@@ -22,11 +32,19 @@ export const useMenuData = (restaurants: Restaurant[]) => {
         .limit(50);
 
       if (error) {
-        console.error('Error fetching menu items:', error);
+        console.error('[useMenuData] Error fetching menu items:', error);
         throw error;
       }
 
-      const transformedItems: MealType[] = menuItems?.map(item => {
+      console.log('[useMenuData] Raw menu items result:', menuItems);
+
+      // Defensive: if menuItems is not array, treat as empty
+      if (!Array.isArray(menuItems)) {
+        console.warn('[useMenuData] menuItems not an array:', menuItems);
+        return [];
+      }
+
+      const transformedItems: MealType[] = menuItems.map(item => {
         let nutritionalInfo = {
           calories: 0,
           protein: 0,
@@ -35,9 +53,11 @@ export const useMenuData = (restaurants: Restaurant[]) => {
         };
         
         try {
-          if (item.nutritional_info && 
-              typeof item.nutritional_info === 'object' && 
-              !Array.isArray(item.nutritional_info)) {
+          if (
+            item.nutritional_info &&
+            typeof item.nutritional_info === 'object' &&
+            !Array.isArray(item.nutritional_info)
+          ) {
             nutritionalInfo = {
               calories: Number(item.nutritional_info.calories) || 0,
               protein: Number(item.nutritional_info.protein) || 0,
@@ -46,14 +66,15 @@ export const useMenuData = (restaurants: Restaurant[]) => {
             };
           }
         } catch (e) {
-          console.error("Error parsing nutritional info:", e);
+          console.error("[useMenuData] Error parsing nutritional info:", e);
         }
 
+        // Simulate dietary tags if available
         const mockDietaryTags = [];
-        if (item.name.toLowerCase().includes('vegetarian') || item.description?.toLowerCase().includes('vegetarian')) {
+        if (item.name?.toLowerCase().includes('vegetarian') || item.description?.toLowerCase().includes('vegetarian')) {
           mockDietaryTags.push('vegetarian');
         }
-        if (item.name.toLowerCase().includes('gluten') || item.description?.toLowerCase().includes('gluten')) {
+        if (item.name?.toLowerCase().includes('gluten') || item.description?.toLowerCase().includes('gluten')) {
           mockDietaryTags.push('gluten-free');
         }
 
@@ -73,10 +94,12 @@ export const useMenuData = (restaurants: Restaurant[]) => {
           updated_at: item.updated_at,
           dietary_tags: mockDietaryTags
         } as MealType;
-      }) || [];
+      });
 
+      // Log the transformed output
+      console.log('[useMenuData] Final transformed menu items:', transformedItems);
       return transformedItems;
     },
-    enabled: restaurants.length > 0
+    enabled: restaurantIds.length > 0
   });
 };
