@@ -66,7 +66,10 @@ export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistor
     // Map database fields to WorkoutHistoryItem type
     return data.map(item => ({
       ...item,
-      user_id: item.workout_history_user_id // Map database field to expected field
+      user_id: item.workout_history_user_id, // Map database field to expected field
+      // Provide fallback values for optional fields
+      workout_plan_id: item.workout_log_id || '',
+      completed_exercises: []
     }));
   } catch (error) {
     console.error('Error fetching workout history:', error);

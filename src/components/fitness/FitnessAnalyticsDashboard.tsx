@@ -37,8 +37,10 @@ const FitnessAnalyticsDashboard = () => {
         total_exercises: item.total_exercises,
         duration: item.duration,
         calories_burned: item.calories_burned,
-        workout_plan_id: item.workout_plan_id || '', // Provide default for compatibility
-        completed_exercises: item.completed_exercises || [] // Provide default for compatibility
+        // Use workout_log_id as fallback for workout_plan_id since the database doesn't have workout_plan_id
+        workout_plan_id: item.workout_log_id || '',
+        // Use empty array as fallback for completed_exercises
+        completed_exercises: []
       }));
       
       setWorkoutHistory(mappedHistory);

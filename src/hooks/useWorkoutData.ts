@@ -41,6 +41,9 @@ export const useWorkoutData = () => {
         total_exercises: item.total_exercises,
         duration: item.duration,
         calories_burned: item.calories_burned,
+        // Provide fallback values for optional fields
+        workout_plan_id: item.workout_log_id || '',
+        completed_exercises: []
       }));
       
       setHistory(mappedHistory);

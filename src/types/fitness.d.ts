@@ -50,7 +50,7 @@ export interface WorkoutPlan {
 export interface WorkoutDay {
   day_name: string;
   exercises: Exercise[];
-  id?: string;
+  id?: string; // Made optional to be compatible with workouts.ts
   workout_plan_id?: string; // Added for compatibility
   name?: string;
   day_number?: number;
@@ -123,9 +123,9 @@ export interface WorkoutHistoryItem {
   total_exercises: number;
   duration: number;
   calories_burned?: number;
-  // Make it compatible with WorkoutLog
-  workout_plan_id: string; // Make required for compatibility
-  completed_exercises: CompletedExercise[]; // Make required for compatibility
+  // Make it compatible with WorkoutLog but with optional fields for fallback
+  workout_plan_id?: string; // Make optional for compatibility
+  completed_exercises?: CompletedExercise[]; // Make optional for compatibility
 }
 
 export interface WorkoutSchedule {

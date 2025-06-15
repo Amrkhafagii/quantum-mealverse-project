@@ -20,10 +20,10 @@ export interface WorkoutPlan {
 }
 
 export interface WorkoutDay {
-  id: string;
-  workout_plan_id: string;
+  id?: string; // Made optional to match fitness.d.ts
+  workout_plan_id?: string; // Made optional to match fitness.d.ts
   day_name: string;
-  day_number: number;
+  day_number?: number; // Made optional
   exercises: Exercise[];
   estimated_duration?: number;
 }
@@ -94,6 +94,9 @@ export interface WorkoutHistoryItem {
   total_exercises: number;
   duration: number;
   calories_burned?: number;
+  // Optional fields for compatibility
+  workout_plan_id?: string;
+  completed_exercises?: CompletedExercise[];
 }
 
 export interface WorkoutRecommendation {
