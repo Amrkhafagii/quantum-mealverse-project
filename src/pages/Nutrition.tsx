@@ -5,50 +5,62 @@ import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import { PlatformTabBar, TabItem } from '@/components/ui/platform-tab-bar';
 import ResponsiveContainer from '@/components/ui/responsive-container';
-// Fix import for default export (not named)
-// And remove 'useMealPlan' and 'Restaurant2' icon for now since they're missing
 import TDEECalculator from '@/components/fitness/TDEECalculator';
 import NutritionDashboard from '@/components/fitness/NutritionDashboard';
-// Remove: import { useMealPlan } from '@/hooks/useMealPlan';
-// Remove: import { Calculator, Restaurant2 } from 'lucide-react';
-import { Calculator } from 'lucide-react';
+import { useMealPlan } from "@/hooks/useMealPlan";
+import { Calculator, Utensils } from "lucide-react";
 
 const NutritionPage = () => {
   const { user } = useAuth();
+  // Active tab managed here to allow switching from child
   const [activeTab, setActiveTab] = useState('calculator');
-  // Temporarily remove meal plan logic for build
-  // const { calculationResult, mealPlan, isLoading, error, calculateTDEE, updateMealPlan } = useMealPlan(user?.id);
 
+  // Add meal plan logic
+  const {
+    calculationResult,
+    mealPlan,
+    isLoading,
+    error,
+    calculateTDEEAndGeneratePlan,
+    updateMealPlan,
+  } = useMealPlan();
+
+  // Tabs for calculator and meal plan dashboard
   const tabs: TabItem[] = [
     {
       id: 'calculator',
       label: 'Calculator',
       icon: Calculator,
+      // Pass calculateTDEEAndGeneratePlan and tab navigation setter
       content: (
-        <TDEECalculator />
-      )
+        <TDEECalculator
+          onCalculate={calcResult => {
+            calculateTDEEAndGeneratePlan(calcResult);
+            setActiveTab('dashboard');
+          }}
+          isLoading={isLoading}
+          error={error}
+        />
+      ),
     },
-    // Dashboard tab commented out to prevent type issues
-    // {
-    //   id: 'dashboard',
-    //   label: 'Dashboard',
-    //   icon: Restaurant2,
-    //   content: (
-    //     calculationResult ? (
-    //       <NutritionDashboard
-    //         calculationResult={calculationResult}
-    //         mealPlan={mealPlan}
-    //         onUpdateMealPlan={updateMealPlan}
-    //       />
-    //     ) : (
-    //       <div className="text-center p-8">
-    //         Please calculate your TDEE first.
-    //       </div>
-    //     )
-    //   )
-    // }
+    {
+      id: 'dashboard',
+      label: 'Meal Plan',
+      icon: Utensils,
+      content: calculationResult && mealPlan ? (
+        <NutritionDashboard
+          calculationResult={calculationResult}
+          mealPlan={mealPlan}
+          onUpdateMealPlan={updateMealPlan}
+        />
+      ) : (
+        <div className="text-center p-8">
+          Please calculate your TDEE first.
+        </div>
+      ),
+    }
   ];
-  
+
   return (
     <div className="min-h-screen bg-quantum-black text-white">
       <ParticleBackground />
