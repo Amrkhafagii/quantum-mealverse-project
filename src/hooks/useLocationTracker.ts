@@ -4,6 +4,49 @@ import { DeliveryLocation } from '@/types/location';
 import { useLocationPermission } from './useLocationPermission';
 import { logLocationDebug } from '@/utils/locationDebug';
 
+// Helper to extract a user-friendly message from GeolocationPositionError or Error objects
+function parseGeolocationError(error: any): string {
+  if (typeof window !== "undefined" && typeof window.GeolocationPositionError !== "undefined" && error instanceof window.GeolocationPositionError) {
+    // Classic browser Geolocation error
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        return "Location access denied. Please enable location in your browser settings.";
+      case error.POSITION_UNAVAILABLE:
+        return "Location information is unavailable. Try moving to an area with better connectivity.";
+      case error.TIMEOUT:
+        return "The request to get your location timed out. Please try again.";
+      default:
+        return error.message || 'Could not determine your location.';
+    }
+  }
+  // Capacitor or structure-similar errors
+  if (
+    error && typeof error === 'object' &&
+    (
+      error.code === 1 || error.code === 2 || error.code === 3
+    ) &&
+    typeof error.message === "string"
+  ) {
+    switch (error.code) {
+      case 1:
+        return "Location access denied. Please enable location in your device/browser settings.";
+      case 2:
+        return "Your location is unavailable. Please check your connectivity.";
+      case 3:
+        return "Location request timed out. Please try again.";
+      default:
+        return error.message;
+    }
+  }
+  // Error instance
+  if (error instanceof Error) {
+    return error.message;
+  }
+  // Fallback
+  if (typeof error === 'string') return error;
+  return 'Unable to retrieve location. Please try again.';
+}
+
 export const useLocationTracker = () => {
   const [location, setLocation] = useState<DeliveryLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +122,8 @@ export const useLocationTracker = () => {
           },
           error => {
             logLocationDebug('position-error', { error });
+            // Use our parser for user-friendly messages
+            setError(parseGeolocationError(error));
             reject(error);
           },
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
@@ -104,7 +149,7 @@ export const useLocationTracker = () => {
       });
     } catch (err) {
       logLocationDebug('get-current-position-exception', { error: err });
-      setError(err instanceof Error ? err.message : 'Unknown error getting location');
+      setError(parseGeolocationError(err));
       return null;
     }
   }, [permissionStatus, requestPermission]);
@@ -142,7 +187,7 @@ export const useLocationTracker = () => {
       }
       return null;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error updating location');
+      setError(parseGeolocationError(err));
       logLocationDebug('update-location-error', { error: err });
       console.error('Error updating location:', err);
       return null;
