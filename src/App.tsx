@@ -19,6 +19,8 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
 import RestaurantDashboard from "./pages/restaurant/Dashboard";
 import RestaurantOrders from "./pages/restaurant/Orders";
+import RestaurantMenu from "./pages/restaurant/Menu";
+import RestaurantSettings from "./pages/restaurant/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
@@ -113,6 +115,16 @@ function App() {
                       <Route path="/restaurant/orders" element={
                         <ProtectedRoute allowedUserTypes={['restaurant']}>
                           <RestaurantOrders />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/restaurant/menu" element={
+                        <ProtectedRoute allowedUserTypes={['restaurant']}>
+                          <RestaurantMenu />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/restaurant/settings" element={
+                        <ProtectedRoute allowedUserTypes={['restaurant']}>
+                          <RestaurantSettings />
                         </ProtectedRoute>
                       } />
                       <Route path="/orders" element={
