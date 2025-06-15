@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Restaurant, VerificationDocument } from '@/types/restaurant';
 
@@ -175,14 +174,16 @@ export const restaurantService = {
   },
 
   async getVerificationDocuments(restaurantId: string): Promise<VerificationDocument[]> {
+    // Use schema("public") because it's likely not in the generated types
     const { data, error } = await supabase
-      .from('verification_documents')
+      .schema("public")
+      .from('verification_documents' as any)
       .select('*')
       .eq('restaurant_id', restaurantId);
-    
+
     if (error) throw error;
-    
-    return (data || []).map(doc => ({
+
+    return (data || []).map((doc: any) => ({
       id: doc.id,
       restaurant_id: doc.restaurant_id,
       document_type: doc.document_type,
@@ -203,7 +204,8 @@ export const restaurantService = {
     file_url: string;
   }): Promise<VerificationDocument> {
     const { data, error } = await supabase
-      .from('verification_documents')
+      .schema("public")
+      .from('verification_documents' as any)
       .insert({
         restaurant_id: restaurantId,
         document_type: documentData.document_type,
@@ -216,34 +218,38 @@ export const restaurantService = {
       })
       .select()
       .single();
-    
+
     if (error) throw error;
     if (!data) throw new Error('Failed to upload document');
-    
+
+    // Allow any for unknown type due to schema("public")
+    const doc: any = data;
     return {
-      id: data.id,
-      restaurant_id: data.restaurant_id,
-      document_type: data.document_type,
-      document_name: data.document_name,
-      document_url: data.document_url,
-      file_url: data.file_url,
-      status: data.status,
-      verification_status: data.verification_status,
-      verification_notes: data.verification_notes,
-      uploaded_at: data.uploaded_at,
-      verified_at: data.verified_at
+      id: doc.id,
+      restaurant_id: doc.restaurant_id,
+      document_type: doc.document_type,
+      document_name: doc.document_name,
+      document_url: doc.document_url,
+      file_url: doc.file_url,
+      status: doc.status,
+      verification_status: doc.verification_status,
+      verification_notes: doc.verification_notes,
+      uploaded_at: doc.uploaded_at,
+      verified_at: doc.verified_at
     };
   },
 
   async deleteVerificationDocument(documentId: string): Promise<void> {
     const { error } = await supabase
-      .from('verification_documents')
+      .schema("public")
+      .from('verification_documents' as any)
       .delete()
       .eq('id', documentId);
-    
+
     if (error) throw error;
   }
 };
 
 export { Restaurant, VerificationDocument };
+// Use type-only re-exports for isolatedModules
 export type { Restaurant as RestaurantType, VerificationDocument as VerificationDocumentType };
