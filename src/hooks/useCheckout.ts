@@ -2,11 +2,11 @@
 import { useCart } from '@/contexts/CartContext';
 import { useCheckoutAuth } from './useCheckoutAuth';
 import { useOrderSubmission } from './useOrderSubmission';
-import { useToast } from '@/hooks/use-toast';
+import { useOrderStore } from '@/stores/orderStore';
 
 export const useCheckout = () => {
   const { items, totalAmount, clearCart } = useCart();
-  const { toast } = useToast();
+  const { isCreatingOrder, orderError } = useOrderStore();
   const { 
     loggedInUser, 
     hasDeliveryInfo, 
@@ -24,26 +24,25 @@ export const useCheckout = () => {
     clearCart
   );
 
-  // Phase 6: Integrated checkout flow without validation stops
   const handleUnifiedSubmit = async (data: any) => {
-    console.log('Phase 6: Starting integrated checkout with items:', {
+    console.log('useCheckout: Starting unified checkout with items:', {
       itemCount: items.length,
       totalAmount,
       hasFlexibleItems: items.some(item => item.assignment_source === 'nutrition_generation')
     });
 
-    // Phase 6: Direct order submission - no validation barriers
     await handleSubmit(data);
   };
 
   return {
     items,
-    isSubmitting,
+    isSubmitting: isSubmitting || isCreatingOrder,
     loggedInUser,
     hasDeliveryInfo,
     defaultValues,
     showLoginPrompt,
     isLoadingUserData,
+    orderError,
     handleAuthSubmit,
     handleSubmit: handleUnifiedSubmit
   };

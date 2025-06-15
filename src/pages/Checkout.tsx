@@ -8,6 +8,7 @@ import { OrderSummary } from '@/components/checkout/OrderSummary';
 import { DeliveryForm } from '@/components/checkout/DeliveryForm';
 import { EmptyCartMessage } from '@/components/checkout/EmptyCartMessage';
 import { AuthOptions } from '@/components/checkout/AuthOptions';
+import { OrderErrorBoundary } from '@/services/errors/OrderErrorBoundary';
 import { useCheckout } from '@/hooks/useCheckout';
 import { Loader2, WifiOff } from 'lucide-react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
@@ -24,14 +25,13 @@ const Checkout = () => {
     defaultValues,
     showLoginPrompt,
     isLoadingUserData,
+    orderError,
     handleAuthSubmit,
     handleSubmit
   } = useCheckout();
   
   const { isOnline } = useConnectionStatus();
   const navigate = useNavigate();
-
-  // No cart cleanup or validation performed - accept all items
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -59,46 +59,54 @@ const Checkout = () => {
             </Button>
           </div>
         )}
-        
-        {items.length === 0 ? (
-          <EmptyCartMessage />
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              {isLoadingUserData ? (
-                <div className="holographic-card p-6 flex items-center justify-center min-h-[200px]">
-                  <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
-                  <span className="ml-2">Loading your information...</span>
-                </div>
-              ) : showLoginPrompt ? (
-                <AuthOptions />
-              ) : (
-                <>
-                  {!loggedInUser && (
-                    <CheckoutAuthForm 
-                      onSubmit={handleAuthSubmit}
-                      email={loggedInUser?.email}
-                      showPassword={!loggedInUser && !hasDeliveryInfo}
-                    />
-                  )}
-                  
-                  {(loggedInUser || hasDeliveryInfo) && (
-                    <DeliveryForm
-                      onSubmit={handleSubmit}
-                      defaultValues={defaultValues}
-                      isSubmitting={isSubmitting}
-                      disabled={!isOnline}
-                    />
-                  )}
-                </>
-              )}
-            </div>
-            
-            <div>
-              <OrderSummary />
-            </div>
+
+        {orderError && (
+          <div className="bg-red-900/20 border border-red-500/30 text-red-200 px-4 py-3 rounded-md mb-6">
+            <p>Error: {orderError}</p>
           </div>
         )}
+        
+        <OrderErrorBoundary>
+          {items.length === 0 ? (
+            <EmptyCartMessage />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                {isLoadingUserData ? (
+                  <div className="holographic-card p-6 flex items-center justify-center min-h-[200px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+                    <span className="ml-2">Loading your information...</span>
+                  </div>
+                ) : showLoginPrompt ? (
+                  <AuthOptions />
+                ) : (
+                  <>
+                    {!loggedInUser && (
+                      <CheckoutAuthForm 
+                        onSubmit={handleAuthSubmit}
+                        email={loggedInUser?.email}
+                        showPassword={!loggedInUser && !hasDeliveryInfo}
+                      />
+                    )}
+                    
+                    {(loggedInUser || hasDeliveryInfo) && (
+                      <DeliveryForm
+                        onSubmit={handleSubmit}
+                        defaultValues={defaultValues}
+                        isSubmitting={isSubmitting}
+                        disabled={!isOnline}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+              
+              <div>
+                <OrderSummary />
+              </div>
+            </div>
+          )}
+        </OrderErrorBoundary>
       </main>
       
       <Footer />

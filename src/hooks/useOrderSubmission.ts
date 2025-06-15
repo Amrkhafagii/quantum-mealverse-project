@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CartItem } from '@/types/cart';
-import { createOrder, hasMixedOrderTypes } from '@/services/orders/orderCreationService';
+import { unifiedOrderService, CreateOrderRequest } from '@/services/orders/UnifiedOrderService';
+import { useOrderStore } from '@/stores/orderStore';
 
 export const useOrderSubmission = (
-  userId: string | undefined, // UUID string from auth
+  userId: string | undefined,
   items: CartItem[],
   totalAmount: number,
   hasDeliveryInfo: boolean,
@@ -13,53 +14,53 @@ export const useOrderSubmission = (
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { setCreatingOrder, setOrderError, addRecentOrder } = useOrderStore();
 
   const handleSubmit = async (data: any) => {
     if (isSubmitting) return;
     
     setIsSubmitting(true);
-    console.log('Starting order submission with UUID customer_id:', userId);
+    setCreatingOrder(true);
+    setOrderError(null);
+    
+    console.log('useOrderSubmission: Starting order submission with unified service');
 
     try {
-      // Calculate subtotal (90% of total for example)
       const subtotal = totalAmount * 0.9;
       
-      // Prepare order data with proper UUID customer_id
-      const orderData = {
-        customer_id: userId || null, // Pass UUID string directly
-        customer_name: data.fullName,
-        customer_phone: data.phone,
-        customer_email: data.email || '',
-        delivery_address: data.address,
-        city: data.city || '',
-        total: totalAmount,
-        subtotal: subtotal,
-        status: 'pending',
-        payment_method: data.paymentMethod || 'cash',
-        delivery_method: data.deliveryMethod || 'delivery',
-        special_instructions: data.specialInstructions || null,
-        latitude: data.latitude || null,
-        longitude: data.longitude || null,
-        assignment_source: 'nutrition_generation',
-        is_mixed_order: hasMixedOrderTypes(items),
-        deliveryMethod: data.deliveryMethod || 'delivery'
+      const orderRequest: CreateOrderRequest = {
+        customerData: {
+          id: userId,
+          name: data.fullName,
+          email: data.email || '',
+          phone: data.phone
+        },
+        deliveryData: {
+          address: data.address,
+          city: data.city || '',
+          latitude: data.latitude || null,
+          longitude: data.longitude || null,
+          method: data.deliveryMethod || 'delivery',
+          instructions: data.specialInstructions || undefined
+        },
+        paymentData: {
+          method: data.paymentMethod || 'cash',
+          total: totalAmount,
+          subtotal: subtotal
+        },
+        items: items
       };
 
-      console.log('Creating order with enhanced service and UUID customer_id');
-
-      // Create order using the service
-      const result = await createOrder(orderData, items);
+      const result = await unifiedOrderService.createOrder(orderRequest);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to create order');
       }
 
-      console.log('Order created successfully with ID:', result.orderId);
+      console.log('useOrderSubmission: Order created successfully with ID:', result.orderId);
 
-      // Restaurant assignment (simplified for now)
-      if (data.latitude && data.longitude) {
-        console.log('Starting restaurant assignment process');
-        // This would be handled by the webhook service or separate assignment service
+      if (result.order) {
+        addRecentOrder(result.order);
       }
 
       toast({
@@ -70,20 +71,23 @@ export const useOrderSubmission = (
 
       clearCart();
       
-      // Redirect to confirmation page
       if (result.orderId) {
         window.location.href = `/order-confirmation/${result.orderId}`;
       }
 
     } catch (error) {
-      console.error('Order submission error:', error);
+      console.error('useOrderSubmission: Order submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to place order. Please try again.";
+      
+      setOrderError(errorMessage);
       toast({
         title: "Order Failed",
-        description: error instanceof Error ? error.message : "Failed to place order. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
+      setCreatingOrder(false);
     }
   };
 
