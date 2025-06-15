@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * Sidebar main container. Uses context for collapsed state.
+ * @param {SidebarProps} props
+ * @returns {JSX.Element}
  */
 export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
   function Sidebar({ children, className, style }, ref) {
@@ -31,6 +33,7 @@ Sidebar.displayName = "Sidebar";
 
 /**
  * SidebarTrigger toggles the sidebar open/collapsed state.
+ * @param props - Button props
  */
 export const SidebarTrigger = React.forwardRef<
   HTMLButtonElement,

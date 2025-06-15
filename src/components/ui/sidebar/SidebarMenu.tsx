@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * SidebarMenu: Container for a group of menu items.
+ * @param props
  */
 export const SidebarMenu = React.forwardRef<HTMLUListElement, { children: React.ReactNode; className?: string; style?: React.CSSProperties }>(
   function SidebarMenu({ children, className, style }, ref) {
@@ -15,6 +16,7 @@ SidebarMenu.displayName = "SidebarMenu";
 
 /**
  * SidebarMenuItem: Container for a single item.
+ * @param props
  */
 export const SidebarMenuItem = React.forwardRef<HTMLLIElement, SidebarMenuItemProps>(
   function SidebarMenuItem({ children, className = "", style }, ref) {
@@ -25,9 +27,10 @@ SidebarMenuItem.displayName = "SidebarMenuItem";
 
 /**
  * SidebarMenuButton: The main button interface for menu actions. Used alone or with `asChild`.
+ * @param props
  */
 export const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonProps>(
-  function SidebarMenuButton({ children, asChild, className, style, ...rest }, ref) {
+  function SidebarMenuButton({ children, asChild = false, className, style, ...rest }, ref) {
     if (asChild && React.isValidElement(children)) {
       return React.cloneElement(children as React.ReactElement, {
         className: cn("sidebar-menu-btn", (children as any)?.props?.className, className),
