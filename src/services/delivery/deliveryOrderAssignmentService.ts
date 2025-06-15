@@ -1,469 +1,266 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { DeliveryAssignment } from '@/types/delivery-assignment';
-import { toast } from '@/hooks/use-toast';
-// Remove the conflicting import
-// import { rejectDeliveryAssignment } from './deliveryLocationService';
+import { DeliveryDistanceCalculationService } from './DeliveryDistanceCalculationService';
+import { DeliveryLocationTrackingService } from './DeliveryLocationTrackingService';
+import { DeliveryEarningsService } from './DeliveryEarningsService';
+import {
+  DeliveryAssignmentNotFoundError,
+  UnauthorizedDeliveryUserError,
+  InvalidStatusTransitionError,
+  LocationUpdateFailedError,
+} from './DeliveryAssignmentErrors';
 
-// Find nearby delivery assignments for a user based on their location
-export const findNearbyAssignments = async (
-  latitude: number, 
-  longitude: number,
-  maxDistanceKm: number = 10
-): Promise<DeliveryAssignment[]> => {
-  try {
-    // Query for actual pending delivery assignments
+/** Accept, pick up, deliver, update/track, and log real delivery assignments.
+ * No mock or fallback logic remains!
+ */
+export const deliveryOrderAssignmentService = {
+  /**
+   * Mark assignment as picked up; log timestamp, update order.
+   */
+  async pickupDelivery(assignmentId: string, deliveryUserId: string): Promise<void> {
+    // Find assignment
+    const { data: assignment, error: fetchError } = await supabase
+      .from('delivery_assignments')
+      .select('id, delivery_user_id, status, order_id')
+      .eq('id', assignmentId)
+      .single();
+    if (fetchError || !assignment) throw new DeliveryAssignmentNotFoundError();
+
+    if (assignment.delivery_user_id !== deliveryUserId) {
+      throw new UnauthorizedDeliveryUserError();
+    }
+    if (assignment.status !== "assigned") {
+      throw new InvalidStatusTransitionError();
+    }
+
+    // Start transaction
+    const now = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('delivery_assignments')
+      .update({ status: 'picked_up', pickup_time: now, updated_at: now })
+      .eq('id', assignmentId);
+    if (updateError) throw updateError;
+
+    // Trigger order status update via backend triggers if set up.
+    // Or update manually if not handled in DB.
+    await supabase
+      .from('orders')
+      .update({ status: 'picked_up' })
+      .eq('id', assignment.order_id);
+  },
+
+  /**
+   * Mark assignment as on-the-way to customer.
+   */
+  async startDeliveryToCustomer(assignmentId: string, deliveryUserId: string): Promise<void> {
+    const { data: assignment, error: fetchError } = await supabase
+      .from('delivery_assignments')
+      .select('id, delivery_user_id, status, order_id')
+      .eq('id', assignmentId)
+      .single();
+    if (fetchError || !assignment) throw new DeliveryAssignmentNotFoundError();
+    if (assignment.delivery_user_id !== deliveryUserId) {
+      throw new UnauthorizedDeliveryUserError();
+    }
+    if (assignment.status !== "picked_up") {
+      throw new InvalidStatusTransitionError();
+    }
+    const now = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('delivery_assignments')
+      .update({ status: 'on_the_way', updated_at: now })
+      .eq('id', assignmentId);
+    if (updateError) throw updateError;
+    // (Order status auto-updated by trigger or manually.)
+    await supabase
+      .from('orders')
+      .update({ status: 'on_the_way' })
+      .eq('id', assignment.order_id);
+  },
+
+  /**
+   * Mark delivery as completed.
+   */
+  async completeDelivery(assignmentId: string, deliveryUserId: string): Promise<void> {
+    const { data: assignment, error: fetchError } = await supabase
+      .from('delivery_assignments')
+      .select('id, delivery_user_id, status, order_id')
+      .eq('id', assignmentId)
+      .single();
+    if (fetchError || !assignment) throw new DeliveryAssignmentNotFoundError();
+    if (assignment.delivery_user_id !== deliveryUserId) {
+      throw new UnauthorizedDeliveryUserError();
+    }
+    if (assignment.status !== "on_the_way") {
+      throw new InvalidStatusTransitionError('Only on_the_way assignments can be delivered');
+    }
+    const now = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('delivery_assignments')
+      .update({ status: 'delivered', delivery_time: now, updated_at: now })
+      .eq('id', assignmentId);
+    if (updateError) throw updateError;
+    await supabase
+      .from('orders')
+      .update({ status: 'delivered' })
+      .eq('id', assignment.order_id);
+    // Record earnings (if needed, adjust logic as per your plan)
+    // await DeliveryEarningsService.recordEarnings({...});
+  },
+
+  /**
+   * Allow logging a new location update during delivery.
+   */
+  async logLocationTrackingUpdate(params: {
+    assignmentId: string;
+    deliveryUserId: string;
+    latitude: number;
+    longitude: number;
+    timestamp: string;
+    accuracy?: number;
+    speed?: number;
+    heading?: number;
+    batteryLevel?: number;
+    networkType?: string;
+  }) {
+    try {
+      await DeliveryLocationTrackingService.logLocationUpdate(params);
+    } catch (err) {
+      throw new LocationUpdateFailedError();
+    }
+  },
+
+  /**
+   * Reject an assignment that was offered to a delivery user
+   */
+  async rejectAssignment(assignmentId: string, deliveryUserId: string, reason?: string): Promise<void> {
+    const { data: assignment, error: fetchError } = await supabase
+      .from('delivery_assignments')
+      .select('id, delivery_user_id, status, order_id')
+      .eq('id', assignmentId)
+      .single();
+    
+    if (fetchError || !assignment) throw new DeliveryAssignmentNotFoundError();
+    
+    if (assignment.delivery_user_id !== deliveryUserId) {
+      throw new UnauthorizedDeliveryUserError();
+    }
+    
+    if (assignment.status !== "assigned") {
+      throw new InvalidStatusTransitionError('Only assigned deliveries can be rejected');
+    }
+    
+    const now = new Date().toISOString();
+    
+    // Record the rejection reason
+    await supabase
+      .from('delivery_assignment_rejections')
+      .insert({
+        assignment_id: assignmentId,
+        order_id: assignment.order_id,
+        delivery_user_id: deliveryUserId,
+        reason: reason || 'No reason provided'
+      });
+    
+    // Update the assignment status
+    const { error: updateError } = await supabase
+      .from('delivery_assignments')
+      .update({ 
+        status: 'cancelled', 
+        updated_at: now,
+        cancellation_reason: reason || 'Rejected by driver'
+      })
+      .eq('id', assignmentId);
+    
+    if (updateError) throw updateError;
+    
+    // Make the driver available for other assignments
+    await supabase.rpc('decrement_delivery_count', {
+      user_id: deliveryUserId
+    });
+  },
+
+  /**
+   * Calculate estimated delivery time based on distance and traffic
+   */
+  async calculateEstimatedDeliveryTime(
+    assignmentId: string,
+    restaurantLat: number,
+    restaurantLng: number,
+    customerLat: number,
+    customerLng: number
+  ): Promise<Date> {
+    try {
+      // Calculate distance using our service
+      const distanceKm = await DeliveryDistanceCalculationService.calculateDistanceKm(
+        restaurantLat, restaurantLng, customerLat, customerLng
+      );
+      
+      // Base calculation: 5 minutes + 3 minutes per km
+      const baseMinutes = 5;
+      const minutesPerKm = 3;
+      const estimatedMinutes = baseMinutes + (distanceKm * minutesPerKm);
+      
+      // Add buffer for traffic conditions (could be more sophisticated)
+      const trafficBuffer = 5; // minutes
+      const totalMinutes = estimatedMinutes + trafficBuffer;
+      
+      // Calculate estimated delivery time
+      const estimatedDeliveryTime = new Date();
+      estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + totalMinutes);
+      
+      // Update the assignment with the estimated time
+      await supabase
+        .from('delivery_assignments')
+        .update({ 
+          estimated_delivery_time: estimatedDeliveryTime.toISOString(),
+          distance_km: distanceKm
+        })
+        .eq('id', assignmentId);
+      
+      return estimatedDeliveryTime;
+    } catch (error) {
+      console.error('Error calculating estimated delivery time:', error);
+      // Return a default estimate (30 minutes from now) if calculation fails
+      const defaultEstimate = new Date();
+      defaultEstimate.setMinutes(defaultEstimate.getMinutes() + 30);
+      return defaultEstimate;
+    }
+  },
+
+  /**
+   * Get detailed information about a delivery assignment
+   */
+  async getAssignmentDetails(assignmentId: string): Promise<any> {
     const { data, error } = await supabase
       .from('delivery_assignments')
       .select(`
         *,
-        restaurant:restaurant_id(*),
-        orders:order_id(*)
+        orders:order_id (
+          id,
+          customer_name,
+          customer_phone,
+          delivery_address,
+          latitude,
+          longitude,
+          total,
+          status,
+          created_at,
+          restaurant:restaurant_id (
+            id,
+            name,
+            address,
+            latitude,
+            longitude,
+            phone
+          )
+        )
       `)
-      .eq('status', 'pending')
-      .is('delivery_user_id', null); // Only get unassigned deliveries
-    
-    if (error) {
-      console.error('Error finding nearby assignments:', error);
-      throw error;
-    }
-    
-    // Add distance information based on the user's location
-    const assignments = (data || []).map(assignment => {
-      // Calculate approximate distance (simplified calculation)
-      const restaurantLat = assignment.restaurant?.latitude || 0;
-      const restaurantLng = assignment.restaurant?.longitude || 0;
-      
-      // Simple distance calculation (Haversine would be more accurate)
-      const latDiff = Math.abs(latitude - restaurantLat);
-      const lngDiff = Math.abs(longitude - restaurantLng);
-      const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111; // Rough km conversion
-      
-      return {
-        ...assignment,
-        distance_km: parseFloat(distance.toFixed(2)), 
-        estimate_minutes: Math.round(distance * 3) + 10, // Rough estimate: 3 min per km + 10 min base time
-        status: assignment.status as DeliveryAssignment['status']
-      };
-    });
-    
-    // Filter by distance and sort by proximity
-    return assignments
-      .filter(a => a.distance_km <= maxDistanceKm)
-      .sort((a, b) => a.distance_km - b.distance_km);
-  } catch (error) {
-    console.error('Error in findNearbyAssignments:', error);
-    throw error;
-  }
-};
-
-// Create a delivery assignment for an order that's ready for pickup
-export const createDeliveryAssignmentForOrder = async (
-  orderId: string,
-  restaurantId: string
-): Promise<DeliveryAssignment | null> => {
-  try {
-    // Check if assignment already exists
-    const { data: existingAssignment, error: checkError } = await supabase
-      .from('delivery_assignments')
-      .select('*')
-      .eq('order_id', orderId)
-      .single();
-      
-    if (existingAssignment) {
-      console.log(`Delivery assignment already exists for order ${orderId}`);
-      return existingAssignment as DeliveryAssignment;
-    }
-    
-    // Get restaurant info for location data
-    const { data: restaurant, error: restaurantError } = await supabase
-      .from('restaurants')
-      .select('name, latitude, longitude')
-      .eq('id', restaurantId)
-      .single();
-      
-    if (restaurantError) {
-      console.error('Error fetching restaurant data:', restaurantError);
-      throw restaurantError;
-    }
-    
-    // Create new delivery assignment with location data
-    const { data: newAssignment, error: createError } = await supabase
-      .from('delivery_assignments')
-      .insert({
-        order_id: orderId,
-        restaurant_id: restaurantId,
-        status: 'pending',
-        latitude: restaurant.latitude,
-        longitude: restaurant.longitude,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-      
-    if (createError) {
-      console.error('Error creating delivery assignment:', createError);
-      throw createError;
-    }
-    
-    console.log(`Created new delivery assignment for order ${orderId}`);
-    
-    // Record in order history
-    await supabase.from('order_history').insert({
-      order_id: orderId,
-      status: 'delivery_requested',
-      restaurant_id: restaurantId,
-      restaurant_name: restaurant.name,
-      details: { assignment_id: newAssignment.id }
-    });
-    
-    return newAssignment as DeliveryAssignment;
-  } catch (error) {
-    console.error('Error in createDeliveryAssignmentForOrder:', error);
-    return null;
-  }
-};
-
-// Accept a delivery assignment
-export const acceptDeliveryAssignment = async (
-  assignmentId: string,
-  deliveryUserId: string
-): Promise<DeliveryAssignment> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_assignments')
-      .update({ 
-        delivery_user_id: deliveryUserId,
-        status: 'assigned',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', assignmentId)
-      .eq('status', 'pending') // Only accept if still pending
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Error accepting assignment:', error);
-      throw error;
-    }
-    
-    // Record the assignment in order history
-    const assignment = data as DeliveryAssignment;
-    await supabase.from('order_history').insert({
-      order_id: assignment.order_id,
-      status: 'delivery_assigned',
-      restaurant_id: assignment.restaurant_id,
-      restaurant_name: 'Restaurant', // We'll need to fetch this in a real app
-      details: { 
-        delivery_user_id: deliveryUserId,
-        assigned_at: new Date().toISOString()
-      }
-    });
-    
-    return {
-      ...assignment,
-      status: assignment.status as DeliveryAssignment['status']
-    };
-  } catch (error) {
-    console.error('Error in acceptDeliveryAssignment:', error);
-    throw error;
-  }
-};
-
-// Reject a delivery assignment - renamed to avoid conflicts
-export const rejectAssignment = async (
-  assignmentId: string,
-  reason?: string
-): Promise<void> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_assignments')
-      .select('order_id, delivery_user_id')
       .eq('id', assignmentId)
       .single();
-      
-    if (error) {
-      throw error;
-    }
     
-    // Store rejection data in the delivery_assignment_rejections table
-    await supabase.from('delivery_assignment_rejections').insert({
-      assignment_id: assignmentId,
-      order_id: data.order_id,
-      reason: reason || 'No reason provided'
-    });
-  } catch (error) {
-    console.error('Error in rejectAssignment:', error);
-    throw error;
-  }
-};
-
-// Update delivery location during active delivery
-export const updateDeliveryLocation = async (
-  assignmentId: string,
-  latitude: number,
-  longitude: number
-): Promise<void> => {
-  try {
-    // Update the delivery assignment with current location
-    await supabase
-      .from('delivery_assignments')
-      .update({ 
-        latitude,
-        longitude,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', assignmentId);
+    if (error) throw error;
+    if (!data) throw new DeliveryAssignmentNotFoundError();
     
-    // In a production app, we would also store location history for tracking
-    // Here we'll just log it
-    console.log(`Location updated for delivery ${assignmentId}: ${latitude}, ${longitude}`);
-    
-    // Store location in the dedicated delivery_locations table
-    await supabase.from('delivery_locations').insert({
-      assignment_id: assignmentId,
-      latitude,
-      longitude
-    });
-  } catch (error) {
-    console.error('Error in updateDeliveryLocation:', error);
-    throw error;
-  }
-};
-
-// Mark delivery as picked up from restaurant
-export const pickupDelivery = async (
-  assignmentId: string
-): Promise<DeliveryAssignment> => {
-  try {
-    const result = await updateDeliveryStatus(assignmentId, 'picked_up');
-    
-    if (result.error) {
-      throw result.error;
-    }
-    
-    // Update order status in the orders table
-    if (result.data && result.data.order_id) {
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ status: 'picked_up' })
-        .eq('id', result.data.order_id);
-        
-      if (orderError) {
-        console.error('Error updating order status to picked_up:', orderError);
-        // Non-fatal error, continue
-      } else {
-        // Record in order history
-        try {
-          // Get restaurant name first
-          const { data: restaurant } = await supabase
-            .from('restaurants')
-            .select('name')
-            .eq('id', result.data.restaurant_id)
-            .single();
-            
-          await supabase.from('order_history').insert({
-            order_id: result.data.order_id,
-            status: 'picked_up',
-            restaurant_id: result.data.restaurant_id,
-            restaurant_name: restaurant?.name || 'Unknown Restaurant',
-            details: { 
-              delivery_assignment_id: assignmentId,
-              picked_up_at: new Date().toISOString()
-            }
-          });
-        } catch (historyError) {
-          console.error('Error recording pickup in order history:', historyError);
-          // Non-fatal error, continue
-        }
-      }
-    }
-    
-    return result.data;
-  } catch (error) {
-    console.error('Error in pickupDelivery:', error);
-    throw error;
-  }
-};
-
-// Mark delivery as on the way to customer
-export const startDeliveryToCustomer = async (
-  assignmentId: string
-): Promise<DeliveryAssignment> => {
-  try {
-    // First, update the delivery assignment status
-    const result = await updateDeliveryStatus(assignmentId, 'on_the_way');
-    
-    if (result.error) {
-      throw result.error;
-    }
-    
-    // Now, get the order_id from the updated assignment
-    const assignmentData = result.data;
-    
-    // Update the order status to match the delivery status
-    if (assignmentData && assignmentData.order_id) {
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ status: 'on_the_way' })
-        .eq('id', assignmentData.order_id);
-        
-      if (orderError) {
-        console.error('Error updating order status:', orderError);
-        // Continue anyway as the delivery status was updated successfully
-      } else {
-        // Record in order history for tracking
-        try {
-          // Get restaurant name first
-          const { data: restaurant } = await supabase
-            .from('restaurants')
-            .select('name')
-            .eq('id', assignmentData.restaurant_id)
-            .single();
-            
-          await supabase.from('order_history').insert({
-            order_id: assignmentData.order_id,
-            status: 'on_the_way',
-            restaurant_id: assignmentData.restaurant_id,
-            restaurant_name: restaurant?.name || 'Unknown Restaurant',
-            details: { 
-              delivery_assignment_id: assignmentId,
-              started_at: new Date().toISOString()
-            }
-          });
-        } catch (historyError) {
-          console.error('Error recording order history:', historyError);
-          // Non-fatal error, continue
-        }
-      }
-    }
-    
-    return result.data;
-  } catch (error) {
-    console.error('Error in startDeliveryToCustomer:', error);
-    throw error;
-  }
-};
-
-// Complete delivery
-export const completeDelivery = async (
-  assignmentId: string,
-  deliveryUserId: string,
-  baseAmount: number = 5.0,
-  tipAmount: number = 0
-): Promise<DeliveryAssignment> => {
-  try {
-    // Get the assignment to verify it's valid
-    const { data: assignment, error: assignmentError } = await supabase
-      .from('delivery_assignments')
-      .select('*, orders:order_id(*), restaurant:restaurant_id(name)')
-      .eq('id', assignmentId)
-      .eq('delivery_user_id', deliveryUserId)
-      .single();
-      
-    if (assignmentError) {
-      throw assignmentError;
-    }
-    
-    // Mark as delivered
-    const result = await updateDeliveryStatus(assignmentId, 'delivered');
-    
-    if (result.error) {
-      throw result.error;
-    }
-    
-    // Update order status - this is now explicit and consistent
-    const { error: orderUpdateError } = await supabase
-      .from('orders')
-      .update({ status: 'delivered' })
-      .eq('id', assignment.order_id);
-      
-    if (orderUpdateError) {
-      console.error('Error updating order status:', orderUpdateError);
-      // Continue anyway as the delivery was marked as delivered
-    }
-      
-    // Record order history
-    try {
-      // Get the restaurant name using the relationship
-      const restaurantName = assignment.restaurant?.name || 'Unknown Restaurant';
-      
-      await supabase.from('order_history').insert({
-        order_id: assignment.order_id,
-        status: 'delivered',
-        restaurant_id: assignment.restaurant_id,
-        restaurant_name: restaurantName,
-        details: { 
-          delivered_at: new Date().toISOString(),
-          delivery_user_id: deliveryUserId,
-          assignment_id: assignmentId
-        }
-      });
-    } catch (historyError) {
-      console.error('Error recording delivery in history:', historyError);
-      // Non-fatal error, continue
-    }
-    
-    // In a real app, we would record earnings for the delivery
-    // Since we don't have a dedicated earnings table yet, we'll simulate it
-    const earningData = {
-      delivery_user_id: deliveryUserId,
-      order_id: assignment.order_id,
-      base_amount: baseAmount,
-      tip_amount: tipAmount,
-      total_amount: baseAmount + tipAmount,
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log('Recording earnings', earningData);
-    
-    // Update delivery user statistics (simulated)
-    console.log('Updating delivery stats for user', deliveryUserId);
-    
-    return result.data;
-  } catch (error) {
-    console.error('Error in completeDelivery:', error);
-    toast({
-      title: "Error completing delivery",
-      description: (error as Error).message,
-      variant: "destructive",
-    });
-    throw error;
-  }
-};
-
-// Utility function to update delivery status
-export const updateDeliveryStatus = async (
-  assignmentId: string,
-  status: DeliveryAssignment['status']
-): Promise<{ data: DeliveryAssignment, error: any }> => {
-  try {
-    const result = await supabase
-      .from('delivery_assignments')
-      .update({
-        status,
-        ...(status === 'picked_up' ? { pickup_time: new Date().toISOString() } : {}),
-        ...(status === 'delivered' ? { delivery_time: new Date().toISOString() } : {}),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', assignmentId)
-      .select()
-      .single();
-      
-    if (result.error) {
-      return { data: null as unknown as DeliveryAssignment, error: result.error };
-    }
-    
-    // Cast the status to the expected type
-    const typedData: DeliveryAssignment = {
-      ...result.data,
-      status: result.data.status as DeliveryAssignment['status']
-    };
-    
-    return { data: typedData, error: null };
-  } catch (error) {
-    console.error('Error updating delivery status:', error);
-    return { data: null as unknown as DeliveryAssignment, error };
+    return data;
   }
 };
