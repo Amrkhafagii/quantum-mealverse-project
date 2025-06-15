@@ -51,7 +51,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         toast({
           title: "Location error",
           description:
-            locationError ?? "Could not get valid location coordinates. Please try again.",
+            (locationError ?? "Could not get valid location coordinates. Please try again."),
           variant: "destructive",
         });
       }
@@ -60,7 +60,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
       toast({
         title: "Location error",
         description:
-          locationError ?? error?.message || "We couldn't get your location. Please try again.",
+          (locationError ?? (error?.message || "We couldn't get your location. Please try again.")),
         variant: "destructive",
       });
     } finally {
