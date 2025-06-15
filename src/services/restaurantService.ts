@@ -1,5 +1,54 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import type { Restaurant } from '@/types/restaurant';
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  country?: string;
+  phone?: string;
+  phone_number?: string;
+  email: string;
+  description?: string;
+  is_active: boolean;
+  latitude?: number;
+  longitude?: number;
+  created_at?: string;
+  updated_at?: string;
+  user_id: string;
+  logo_url?: string;
+  cover_image_url?: string;
+  cuisine_type?: string;
+  delivery_fee?: number;
+  delivery_radius?: number;
+  rating?: number;
+  menu_url?: string;
+  business_license?: string;
+  website_url?: string;
+  opening_hours?: {
+    [key: string]: { open: string; close: string }
+  };
+  payment_methods?: string[];
+  terms_and_conditions?: string;
+  privacy_policy?: string;
+  cancellation_policy?: string;
+  verification_status?: string;
+  is_verified?: boolean;
+  onboarding_status?: string;
+  onboarding_step?: number;
+  onboarding_completed_at?: string;
+}
+
+export interface VerificationDocument {
+  id: string;
+  restaurant_id: string;
+  document_type: string;
+  file_url: string;
+  status: string;
+  uploaded_at: string;
+  verified_at?: string;
+}
 
 export const getRestaurants = async (): Promise<Restaurant[]> => {
   const { data, error } = await supabase
@@ -34,20 +83,19 @@ export const getRestaurantProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
-      .eq('restaurants_user_id', userId) // Use correct database field name
+      .eq('restaurants_user_id', userId)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return null; // No restaurant found
+        return null;
       }
       throw error;
     }
 
-    // Map database fields to expected format
     return {
       ...data,
-      user_id: data.restaurants_user_id, // Map from database field to expected field
+      user_id: data.restaurants_user_id,
       name: data.name || 'Unnamed Restaurant',
       address: data.address || 'No Address',
       city: data.city || 'Unknown',
@@ -72,16 +120,15 @@ export const updateRestaurantProfile = async (userId: string, updates: any) => {
     const { data, error } = await supabase
       .from('restaurants')
       .update(updates)
-      .eq('restaurants_user_id', userId) // Use correct database field name
+      .eq('restaurants_user_id', userId)
       .select()
       .single();
 
     if (error) throw error;
 
-    // Map database fields to expected format
     return {
       ...data,
-      user_id: data.restaurants_user_id, // Map from database field to expected field
+      user_id: data.restaurants_user_id,
       name: data.name || 'Unnamed Restaurant',
       address: data.address || 'No Address',
       city: data.city || 'Unknown',
@@ -101,7 +148,7 @@ export const updateRestaurantProfile = async (userId: string, updates: any) => {
   }
 };
 
-export const createRestaurant = async (restaurantData: Omit<Restaurant, 'id' | 'created_at' | 'updated_at'>): Promise<Restaurant> => {
+export const createRestaurant = async (restaurantData: Partial<Restaurant>): Promise<Restaurant> => {
   try {
     const { data, error } = await supabase
       .from('restaurants')
@@ -114,12 +161,10 @@ export const createRestaurant = async (restaurantData: Omit<Restaurant, 'id' | '
         cuisine_type: restaurantData.cuisine_type,
         delivery_fee: restaurantData.delivery_fee,
         delivery_radius: restaurantData.delivery_radius,
-        rating: restaurantData.rating,
-        menu_url: restaurantData.menu_url,
         cover_image_url: restaurantData.cover_image_url,
         is_active: restaurantData.is_active,
         business_license: restaurantData.business_license,
-        phone_number: restaurantData.phone_number,
+        phone_number: restaurantData.phone_number || restaurantData.phone,
         email: restaurantData.email,
         website_url: restaurantData.website_url,
         opening_hours: restaurantData.opening_hours,
@@ -158,4 +203,51 @@ export const createRestaurant = async (restaurantData: Omit<Restaurant, 'id' | '
     console.error("Error creating restaurant:", error);
     throw error;
   }
+};
+
+export const updateRestaurant = async (restaurantId: string, updates: Partial<Restaurant>): Promise<Restaurant> => {
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .update(updates)
+      .eq('id', restaurantId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      ...data,
+      user_id: data.restaurants_user_id,
+      name: data.name || 'Unnamed Restaurant',
+      address: data.address || 'No Address',
+      city: data.city || 'Unknown',
+      cuisine_type: data.cuisine_type || 'Unknown',
+      delivery_fee: data.delivery_fee || 0,
+      delivery_radius: data.delivery_radius || 0,
+      rating: data.rating || 0,
+      menu_url: data.menu_url || '',
+      cover_image_url: data.cover_image_url || '',
+      is_active: data.is_active !== false,
+      created_at: data.created_at || new Date().toISOString(),
+      updated_at: data.updated_at || new Date().toISOString(),
+    } as Restaurant;
+  } catch (error) {
+    console.error("Error updating restaurant:", error);
+    throw error;
+  }
+};
+
+export const getRestaurant = async (userId: string): Promise<Restaurant | null> => {
+  return getRestaurantProfile(userId);
+};
+
+// Create a restaurant service object for backward compatibility
+export const restaurantService = {
+  getRestaurant,
+  updateRestaurant,
+  createRestaurant,
+  getRestaurantProfile,
+  updateRestaurantProfile,
+  getRestaurants
 };

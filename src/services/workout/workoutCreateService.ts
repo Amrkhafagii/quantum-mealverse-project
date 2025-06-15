@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export const createWorkoutSchedule = async (userId: string, scheduleData: any) => {
@@ -25,6 +26,33 @@ export const createWorkoutSchedule = async (userId: string, scheduleData: any) =
     return data;
   } catch (error) {
     console.error('Error creating workout schedule:', error);
+    throw error;
+  }
+};
+
+export const createWorkoutPlan = async (planData: any) => {
+  try {
+    const planToInsert = {
+      workout_plans_user_id: planData.user_id,
+      name: planData.name,
+      description: planData.description,
+      difficulty: planData.difficulty,
+      duration_weeks: planData.duration_weeks,
+      frequency: planData.frequency,
+      goal: planData.goal,
+      is_active: planData.is_active !== false
+    };
+
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .insert(planToInsert)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating workout plan:', error);
     throw error;
   }
 };

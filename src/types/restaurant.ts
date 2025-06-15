@@ -1,10 +1,11 @@
-
 export interface Restaurant {
   id: string;
   name: string;
   address: string;
   city: string;
+  country?: string;
   phone: string;
+  phone_number?: string;
   email: string;
   description?: string;
   is_active: boolean;
@@ -14,16 +15,36 @@ export interface Restaurant {
   updated_at?: string;
   user_id: string;
   logo_url?: string;
+  cover_image_url?: string;
+  cuisine_type?: string;
+  delivery_fee?: number;
+  delivery_radius?: number;
+  rating?: number;
+  menu_url?: string;
+  business_license?: string;
+  website_url?: string;
   opening_hours?: {
     [key: string]: { open: string; close: string }
   };
+  payment_methods?: string[];
+  terms_and_conditions?: string;
+  privacy_policy?: string;
+  cancellation_policy?: string;
+  verification_status?: string;
+  is_verified?: boolean;
+  onboarding_status?: string;
+  onboarding_step?: number;
+  onboarding_completed_at?: string;
+  postal_code?: string;
+  minimum_order_amount?: number;
+  estimated_delivery_time?: number;
 }
 
 export interface MenuItem {
   id: string;
   restaurant_id: string;
   name: string;
-  description?: string; // Keep this optional as it was before
+  description?: string;
   price: number;
   image_url?: string;
   is_available: boolean;
@@ -31,7 +52,6 @@ export interface MenuItem {
   preparation_time: number;
   created_at?: string;
   updated_at?: string;
-  // Add the missing properties to make it compatible with menu.MenuItem
   ingredients?: string[];
   steps?: string[];
   nutritional_info?: {
@@ -51,12 +71,12 @@ export enum OrderStatus {
   PENDING = 'pending',
   AWAITING_RESTAURANT = 'awaiting_restaurant',
   RESTAURANT_ASSIGNED = 'restaurant_assigned',
-  RESTAURANT_ACCEPTED = 'restaurant_accepted', // Full name instead of 'accepted'
-  RESTAURANT_REJECTED = 'restaurant_rejected', // Full name instead of 'rejected'
+  RESTAURANT_ACCEPTED = 'restaurant_accepted',
+  RESTAURANT_REJECTED = 'restaurant_rejected',
   PREPARING = 'preparing',
-  READY_FOR_PICKUP = 'ready_for_pickup', // Full name instead of 'ready'
-  ON_THE_WAY = 'on_the_way', // Full name instead of 'delivering'
-  DELIVERED = 'delivered', // Full name instead of 'completed'
+  READY_FOR_PICKUP = 'ready_for_pickup',
+  ON_THE_WAY = 'on_the_way',
+  DELIVERED = 'delivered',
   CANCELLED = 'cancelled',
   REFUNDED = 'refunded',
   NO_RESTAURANT_ACCEPTED = 'no_restaurant_accepted',
@@ -67,7 +87,7 @@ export interface OrderItem {
   id: string;
   order_id: string;
   meal_id: string;
-  menu_item_id?: string; // Make this optional to handle both meal_id and menu_item_id
+  menu_item_id?: string;
   name: string;
   price: number;
   quantity: number;
