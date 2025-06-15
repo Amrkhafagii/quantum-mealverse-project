@@ -44,6 +44,7 @@ interface OrderStatusData {
 }
 
 export class UnifiedOrderStatusService {
+  static subscribeToOrderStatus: any;
   /**
    * Get comprehensive order status data including history
    */
