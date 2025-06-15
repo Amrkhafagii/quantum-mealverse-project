@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
@@ -55,6 +54,22 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
     }
   }, [getCurrentLocation, onLocationUpdate, toast, isGettingLocation, locationError]);
 
+  // Defensive stringify in case error is an object
+  function displayLocationError(err: any): string {
+    if (!err) return '';
+    if (typeof err === 'string') return err;
+    if (typeof err === 'object') {
+      // If it's a GeolocationPositionError or similar
+      if ('message' in err && typeof err.message === 'string') return err.message;
+      try {
+        return JSON.stringify(err);
+      } catch {
+        return '[Unknown geolocation error]';
+      }
+    }
+    return String(err);
+  }
+
   return (
     <div className="mb-6 space-y-4">
       <div className="flex justify-between items-center">
@@ -95,7 +110,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         <Alert variant="destructive" className="border-red-500 bg-red-500/10">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="font-medium">
-            {locationError}
+            {displayLocationError(locationError)}
           </AlertDescription>
         </Alert>
       )}
