@@ -10,7 +10,7 @@ export async function findNearestRestaurants(
   console.log(`Searching for restaurants near (${latitude}, ${longitude}) within ${maxDistance}km`);
   
   try {
-    // Ensure we're explicitly passing double precision parameters
+    // Call the updated RPC function
     const { data, error } = await supabase.rpc('find_nearest_restaurant', {
       order_lat: parseFloat(latitude.toString()),
       order_lng: parseFloat(longitude.toString()),
@@ -22,8 +22,18 @@ export async function findNearestRestaurants(
       return [];
     }
 
-    console.log('Nearest restaurants:', data);
-    return data || [];
+    console.log('Found restaurants:', data?.length || 0);
+    
+    // Map the response to the expected format
+    return (data || []).map((restaurant: any) => ({
+      restaurant_id: restaurant.restaurant_id,
+      restaurant_name: restaurant.restaurant_name,
+      restaurant_address: restaurant.restaurant_address,
+      restaurant_email: restaurant.restaurant_email,
+      distance_km: restaurant.distance_km,
+      latitude: restaurant.restaurant_latitude,
+      longitude: restaurant.restaurant_longitude
+    }));
   } catch (e) {
     console.error('Unexpected error in findNearestRestaurants:', e);
     return [];

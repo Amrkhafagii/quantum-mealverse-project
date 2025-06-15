@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface NearbyRestaurant {
@@ -38,13 +39,15 @@ export class MultiRestaurantAssignmentService {
         return [];
       }
 
+      console.log('Raw restaurant data from RPC:', data);
+
       // Map the RPC response to match our NearbyRestaurant interface
       return (data || []).map((restaurant: any) => ({
         id: restaurant.restaurant_id,
         name: restaurant.restaurant_name,
         distance_km: restaurant.distance_km,
-        latitude: restaurant.latitude || 0,
-        longitude: restaurant.longitude || 0
+        latitude: restaurant.restaurant_latitude || 0,
+        longitude: restaurant.restaurant_longitude || 0
       }));
     } catch (error) {
       console.error('Error in findNearbyRestaurants:', error);
