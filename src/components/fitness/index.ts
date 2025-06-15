@@ -1,4 +1,3 @@
-
 // Common components
 export { default as PointsDisplay } from './common/PointsDisplay';
 export { default as MacroProgressBar } from './common/MacroProgressBar';
@@ -30,11 +29,25 @@ export { default as AchievementNotification } from './achievements/AchievementNo
 // Enhanced components
 export { default as EnhancedFitnessProfile } from './enhanced/EnhancedFitnessProfile';
 
-// Exercise Library (named export)
+// Exercise Library
 export { ExerciseLibrary } from './ExerciseLibrary';
 
 // New Workout System Components
 export { WorkoutTemplateSelector } from './WorkoutTemplateSelector';
 export { default as SmartWorkoutRecommendations } from './SmartWorkoutRecommendations';
 export { default as WorkoutProgress } from './WorkoutProgress';
-export { default as ProgressAnalytics as NewProgressAnalytics } from './ProgressAnalytics';
+export { default as WorkoutLogDetails } from './WorkoutLogDetails';
+
+// Achievement System
+export { default as AchievementSystem } from './AchievementSystem';
+export { UserAchievements } from './UserAchievements';
+
+// Advanced Components
+export { default as AdvancedProgressCharts } from './AdvancedProgressCharts';
+export { default as ProgressInsights } from './ProgressInsights';
+
+// Enhanced Achievement System
+export { default as EnhancedAchievements } from './EnhancedAchievements';
+
+// Workout Templates
+export { default as WorkoutTemplates } from './WorkoutTemplates';
