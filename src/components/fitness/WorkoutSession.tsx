@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -96,7 +97,6 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
     // Create workout log
     const workoutLog: WorkoutLog = {
       id: crypto.randomUUID(),
-      workout_logs_user_id: plan.user_id, // MUST be set for type compatibility
       user_id: plan.user_id,
       workout_plan_id: plan.id,
       date: new Date().toISOString(),

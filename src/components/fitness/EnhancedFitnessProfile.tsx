@@ -22,10 +22,10 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
     ? Math.min(100, Math.max(0, 100 - ((latestMeasurement.weight || 0) - (userProfile.goal_weight || 0)) / ((userProfile.weight || 0) - (userProfile.goal_weight || 0)) * 100))
     : 0;
 
-  // Get the primary fitness goal from array if available, fallback to single goal
+  // Get the primary fitness goal from array if available
   const primaryFitnessGoal = userProfile?.fitness_goals && userProfile.fitness_goals.length > 0
     ? userProfile.fitness_goals[0]
-    : userProfile?.fitness_goal || "Weight Loss";
+    : "Weight Loss";
 
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
@@ -60,7 +60,7 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
             </div>
             <div className="stat-content">
               <div className="stat-title">Streak</div>
-              <div className="stat-value">{workoutStats?.streak || workoutStats?.streak_days || 0} days</div>
+              <div className="stat-value">{workoutStats?.streak_days || 0} days</div>
             </div>
           </div>
           <div className="stat-card">

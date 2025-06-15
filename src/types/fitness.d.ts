@@ -1,3 +1,4 @@
+
 // User profile types
 export interface UserProfile {
   id: string;
@@ -150,13 +151,17 @@ export interface UserAchievement {
   progress?: number;
 }
 
-// UserWorkoutStats interface
+// UserWorkoutStats interface - Updated to include all necessary fields
 export interface UserWorkoutStats {
-  user_id?: string; // ADDED: for v2 compatibility
-  total_workouts?: number;
-  streak?: number;
+  user_id?: string;
+  total_workouts: number;
+  streak_days: number;
+  longest_streak: number;
+  total_calories_burned: number;
+  total_duration_minutes: number;
+  most_active_day: string;
+  streak?: number; // alias for streak_days
   achievements?: number;
-  most_active_day?: string;
   recent_workouts?: Array<{
     name: string;
     date: string;
@@ -199,7 +204,7 @@ export type FitnessGoal = {
   fitness_goals_user_id: string;
   user_id?: string; // ADDED for v2/x-compatibility in analytics
   name: string;
-  description?: string;
+  description: string; // Made required to match database
   target_value: number;
   current_value: number;
   target_date: string;
@@ -234,6 +239,8 @@ export type TeamMember = {
   team_id: string;
   role: 'leader' | 'member';
   joined_at: string;
+  name?: string; // Added for display purposes
+  points?: number; // Added for display purposes
 };
 
 // Calendar event type needed for scheduling

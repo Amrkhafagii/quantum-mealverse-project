@@ -94,11 +94,10 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
       exercise_name: exercise.exercise_name ?? exercise.name
     })).filter(exercise => (exercise.sets_completed?.length ?? 0) > 0);
     
-    // Create workout log - ADD workout_logs_user_id as on the type
+    // Create workout log
     const workoutLog: WorkoutLog = {
       id: crypto.randomUUID(),
       user_id: plan.user_id,
-      workout_logs_user_id: plan.user_id, // This makes it compatible with the type definition!
       workout_plan_id: plan.id,
       date: new Date().toISOString(),
       duration: Math.round(duration / 60), // Convert to minutes
