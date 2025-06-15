@@ -95,14 +95,31 @@ export function useUnifiedOrderStatus(orderId: string): UseUnifiedOrderStatusRes
 
     // Real-time updates subscription
     if (!orderId) return;
-    // FIX: proper service instance/object used here
-    const unsubscribe = unifiedOrderStatusService.subscribeToOrderStatus(orderId, (order: Order) => {
-      if (order) {
-        dispatch({ type: "SET_DATA", payload: order });
+
+    // Check if method exists, otherwise skip and warn
+    let unsubscribe: undefined | (() => void) = undefined;
+    if (
+      typeof unifiedOrderStatusService.subscribeToOrderStatus === "function"
+    ) {
+      unsubscribe = unifiedOrderStatusService.subscribeToOrderStatus(
+        orderId,
+        (order) => {
+          if (order) {
+            dispatch({ type: "SET_DATA", payload: order });
+          }
+        },
+        (error: unknown) => {
+          dispatch({ type: "SET_ERROR", payload: handleHookError(error) });
+        }
+      );
+    } else {
+      // This is a warning for the dev/user. If that method is missing, the app will still work without real-time updates.
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(
+          "[useUnifiedOrderStatus] subscribeToOrderStatus is not implemented on unifiedOrderStatusService. Real-time updates disabled."
+        );
       }
-    }, (error: unknown) => {
-      dispatch({ type: "SET_ERROR", payload: handleHookError(error) });
-    });
+    }
 
     return () => {
       if (unsubscribe) unsubscribe();
