@@ -37,7 +37,7 @@ export const ReviewsManagement = () => {
       const { data, error } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('admin_users_user_id', user.id)
+        .eq('admin_users_user_id', user.id) // fixed: use admin_users_user_id
         .single();
         
       if (error || !data) {
