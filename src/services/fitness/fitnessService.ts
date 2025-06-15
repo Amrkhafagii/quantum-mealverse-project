@@ -23,23 +23,14 @@ interface DBUserProfile {
 interface DBFitnessGoal {
   id: string;
   fitness_goals_user_id: string;
-  user_id?: string; // not in DB, but possible
   name: string;
-  description?: string;
-  target_value: number;
-  current_value: number;
-  target_date: string;
-  status: string;
-  goal_type: string;
-  created_at?: string;
-  updated_at?: string;
-  title?: string;
+  description: string;
   target_weight?: number;
   target_body_fat?: number;
-  category?: string;
-  type?: string;
-  start_date?: string;
-  is_active?: boolean;
+  target_date: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface DBWorkoutLog {
@@ -97,9 +88,19 @@ export const getFitnessGoals = async (userId: string): Promise<FitnessGoal[]> =>
 
     if (!data) return [];
 
-    // Cast and map to FitnessGoal[]
+    // Cast and map to FitnessGoal[] with proper field mapping
     return (data as DBFitnessGoal[] || []).map(goal => ({
-      ...goal
+      id: goal.id,
+      fitness_goals_user_id: goal.fitness_goals_user_id,
+      name: goal.name,
+      description: goal.description || '',
+      target_value: goal.target_weight || goal.target_body_fat || 0,
+      current_value: 0,
+      target_date: goal.target_date,
+      status: goal.status as any,
+      goal_type: 'weight_loss',
+      created_at: goal.created_at,
+      updated_at: goal.updated_at
     }));
   } catch (error) {
     console.error('Error in getFitnessGoals:', error);
@@ -116,9 +117,11 @@ export const createFitnessGoal = async (
       .from('fitness_goals')
       .insert({
         fitness_goals_user_id: userId,
-        ...goalData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        name: goalData.name || '',
+        description: goalData.description || '',
+        target_weight: goalData.target_value,
+        target_date: goalData.target_date,
+        status: goalData.status || 'not_started'
       });
 
     if (error) {
@@ -184,3 +187,4 @@ export const getUserMeasurements = async (userId: string): Promise<UserMeasureme
     return [];
   }
 };
+
