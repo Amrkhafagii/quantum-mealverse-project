@@ -1,5 +1,4 @@
-
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MealType } from '@/types/meal';
 import { Restaurant } from './useRestaurantsData';
@@ -13,7 +12,20 @@ export const useMenuData = (restaurants: Restaurant[]) => {
   console.log('[useMenuData] Received restaurants:', restaurants);
   console.log('[useMenuData] Filtered valid restaurantIds:', restaurantIds);
 
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  // See React Query DevTools - helpful for debugging in dev
+  if (typeof window !== "undefined" && (window as any).__REACT_QUERY_DEVTOOLS_GLOBAL_HOOK__ === undefined) {
+    import('@tanstack/react-query-devtools').then((devtools) => {
+      if (devtools && devtools.ReactQueryDevtools) {
+        // Only inject ONCE
+        (window as any).__REACT_QUERY_DEVTOOLS_GLOBAL_HOOK__ = true;
+        devtools.ReactQueryDevtools({ initialIsOpen: true });
+      }
+    }).catch(() => {});
+  }
+
+  const queryResult = useQuery({
     queryKey: ['menuData', restaurantIds],
     queryFn: async () => {
       if (!restaurantIds.length) {
@@ -100,6 +112,35 @@ export const useMenuData = (restaurants: Restaurant[]) => {
       console.log('[useMenuData] Final transformed menu items:', transformedItems);
       return transformedItems;
     },
-    enabled: restaurantIds.length > 0
+    enabled: restaurantIds.length > 0,
+    staleTime: 1000 * 10, // 10s, you can increase/decrease for tests
+    cacheTime: 1000 * 60, // 1 min, keep cache short for live testing
+    retry: 2, // Try twice before error
+    refetchOnWindowFocus: true, // Always attempt to keep up to date
+    onSuccess: (data) => {
+      console.log('[useMenuData] Query success. Data:', data);
+    },
+    onError: (err) => {
+      console.error('[useMenuData] Query error:', err);
+    }
   });
+
+  // Invalidate query if restaurantIds change (force refresh menu data)
+  useEffect(() => {
+    if (restaurantIds.length > 0) {
+      queryClient.invalidateQueries({
+        queryKey: ['menuData', restaurantIds],
+      });
+      console.log('[useMenuData] Invalidated queries for new restaurantIds', restaurantIds);
+    }
+  }, [restaurantIds.join(','), queryClient]);
+
+  // Expose manual refetch for debugging purpose
+  (window as any).refetchMenuData = () => {
+    queryClient.invalidateQueries({ queryKey: ['menuData', restaurantIds] });
+    queryResult.refetch && queryResult.refetch();
+    console.log('[useMenuData] Manual refetch triggered');
+  };
+
+  return queryResult;
 };
