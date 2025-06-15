@@ -27,7 +27,7 @@ interface UseLocationPermissionReturn {
   isTracking?: boolean;
   hasShownInitialPrompt?: boolean;
   hasInitialized?: boolean;
-  isLocationStale?: boolean;
+  isLocationStale?: () => boolean; // <-- function signature for compatibility
 }
 
 export function useLocationPermission(): UseLocationPermissionReturn {
