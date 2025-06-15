@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import { getUnifiedCurrentLocation, requestLocationPermission } from '@/utils/unifiedGeolocation';
 
 export interface SimpleLocation {
   latitude: number;
@@ -25,109 +26,67 @@ export const useSimpleLocation = () => {
     hasRequestedPermission: false
   });
 
-  // Check if geolocation is supported
-  const isSupported = 'geolocation' in navigator;
-
-  // Get current location
   const getCurrentLocation = useCallback(async (): Promise<SimpleLocation | null> => {
-    if (!isSupported) {
-      setState(prev => ({ 
-        ...prev, 
-        error: 'Location services are not supported by this browser',
-        permissionStatus: 'denied'
-      }));
-      return null;
-    }
-
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve,
-          reject,
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000 // 5 minutes
-          }
-        );
-      });
-
-      const location: SimpleLocation = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        timestamp: Date.now()
+      const permission = await requestLocationPermission();
+      if (permission !== 'granted') {
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: 'Location permission not granted',
+          permissionStatus: permission
+        }));
+        return null;
+      }
+      const location = await getUnifiedCurrentLocation();
+      if (!location) throw new Error('Could not get location');
+      const loc: SimpleLocation = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy,
+        timestamp: typeof location.timestamp === 'number' ? location.timestamp : Date.now()
       };
-
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        location,
+        location: loc,
         isLoading: false,
         error: null,
         permissionStatus: 'granted'
       }));
-
-      // Cache location in localStorage
-      localStorage.setItem('lastKnownLocation', JSON.stringify(location));
-
-      return location;
-    } catch (error: any) {
-      let errorMessage = 'Unable to access your location';
-      let permissionStatus: 'denied' | 'prompt' = 'denied';
-
-      switch (error.code) {
-        case 1: // PERMISSION_DENIED
-          errorMessage = 'Location access was denied. Please enable location services to find nearby restaurants.';
-          permissionStatus = 'denied';
-          break;
-        case 2: // POSITION_UNAVAILABLE
-          errorMessage = 'Your location is currently unavailable. Please try again.';
-          break;
-        case 3: // TIMEOUT
-          errorMessage = 'Location request timed out. Please try again.';
-          break;
-        default:
-          errorMessage = 'An error occurred while getting your location. Please try again.';
-      }
-
-      setState(prev => ({
+      localStorage.setItem('lastKnownLocation', JSON.stringify(loc));
+      return loc;
+    } catch (e: any) {
+      setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: errorMessage,
-        permissionStatus
+        error: e?.message || 'Unable to access your location',
+        permissionStatus: 'denied'
       }));
-
       return null;
     }
-  }, [isSupported]);
+  }, []);
 
-  // Request location permission and get location
   const requestLocation = useCallback(async (): Promise<boolean> => {
-    setState(prev => ({ ...prev, hasRequestedPermission: true }));
-    const location = await getCurrentLocation();
-    return location !== null;
+    setState((prev) => ({ ...prev, hasRequestedPermission: true }));
+    const loc = await getCurrentLocation();
+    return loc !== null;
   }, [getCurrentLocation]);
 
-  // Load cached location on mount
   useEffect(() => {
     const cachedLocation = localStorage.getItem('lastKnownLocation');
     if (cachedLocation) {
       try {
         const parsed = JSON.parse(cachedLocation);
         const age = Date.now() - parsed.timestamp;
-        
-        // Use cached location if less than 30 minutes old
-        if (age < 1800000) {
-          setState(prev => ({
+        if (age < 1800000) { // 30 mins
+          setState((prev) => ({
             ...prev,
             location: parsed,
             permissionStatus: 'granted'
           }));
         }
-      } catch (e) {
-        console.warn('Failed to parse cached location');
+      } catch {
         localStorage.removeItem('lastKnownLocation');
       }
     }
@@ -135,8 +94,9 @@ export const useSimpleLocation = () => {
 
   return {
     ...state,
-    isSupported,
+    isSupported: true,
     requestLocation,
     getCurrentLocation
   };
 };
+
