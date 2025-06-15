@@ -65,7 +65,7 @@ export const useOrderAssignmentStatus = (orderId: string) => {
 
         const status: OrderAssignmentStatus = {
           status: order.status as any,
-          restaurantName: acceptedAssignment?.restaurants?.name,
+          restaurantName: acceptedAssignment?.restaurants?.[0]?.name,
           restaurantId: acceptedAssignment?.restaurant_id,
           assignmentCount: assignmentCounts.total,
           pendingCount: assignmentCounts.pending,
