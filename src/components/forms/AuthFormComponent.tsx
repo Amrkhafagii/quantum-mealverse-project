@@ -44,7 +44,13 @@ export const AuthFormComponent: React.FC<AuthFormComponentProps> = ({
   const handleSignIn = async (data: SignInFormData) => {
     setIsLoading(true);
     
-    const result = await AuthService.signIn(data);
+    // Create SignInData with guaranteed required properties
+    const signInData: SignInData = {
+      email: data.email,
+      password: data.password,
+    };
+    
+    const result = await AuthService.signIn(signInData);
     
     if (result.success && result.user) {
       toast({
