@@ -153,7 +153,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
         <TabsContent value="recommendations" className="space-y-4 sm:space-y-6">
           <SmartRecommendations />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <AdaptiveDifficulty />
+            <AdaptiveDifficulty userId={activeUserId} />
             <div className="space-y-4 sm:space-y-6">
               <WorkoutVariations />
             </div>

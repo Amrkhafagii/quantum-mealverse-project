@@ -38,6 +38,7 @@ export interface Restaurant {
   postal_code?: string;
   minimum_order_amount?: number;
   estimated_delivery_time?: number;
+  verification_notes?: string;
 }
 
 export interface MenuItem {
@@ -110,4 +111,18 @@ export interface RestaurantOrder {
   updated_at: string;
   formatted_order_id?: string;
   order_items: OrderItem[];
+}
+
+export interface VerificationDocument {
+  id: string;
+  restaurant_id: string;
+  document_type: string;
+  document_name?: string;
+  document_url?: string;
+  file_url: string;
+  status: string;
+  verification_status?: string;
+  verification_notes?: string;
+  uploaded_at: string;
+  verified_at?: string;
 }
