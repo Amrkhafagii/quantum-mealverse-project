@@ -10489,6 +10489,10 @@ export type Database = {
         }
         Returns: string
       }
+      decrement_delivery_count: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
       delete_user_location_history: {
         Args: { p_user_id: string; p_older_than_days?: number }
         Returns: number
@@ -11187,6 +11191,10 @@ export type Database = {
           p_rejection_details?: string
         }
         Returns: boolean
+      }
+      increment_delivery_count: {
+        Args: { user_id: string }
+        Returns: undefined
       }
       initialize_payment_coordination: {
         Args: { p_order_id: string }
