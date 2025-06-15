@@ -63,7 +63,7 @@ export const useLayoutHelpers = () => {
 export const MobileLayout: React.FC<{
   children: React.ReactNode;
   sidebarContent?: React.ReactNode;
-  containerVariant: string;
+  containerVariant: 'default' | 'elevated' | 'outlined';
   className?: string;
 }> = ({ children, sidebarContent, containerVariant, className }) => {
   return (
@@ -87,7 +87,7 @@ export const SidebarLayout: React.FC<{
   sidebarContent: React.ReactNode;
   sidebarPosition: 'left' | 'right';
   sidebarConfig: { className: string; style: any };
-  containerVariant: string;
+  containerVariant: 'default' | 'elevated' | 'outlined';
   className?: string;
 }> = ({ 
   children, 
@@ -130,7 +130,7 @@ export const SidebarLayout: React.FC<{
 // Separate component for split layout (foldable devices)
 export const SplitLayout: React.FC<{
   children: React.ReactNode;
-  containerVariant: string;
+  containerVariant: 'default' | 'elevated' | 'outlined';
   className?: string;
 }> = ({ children, containerVariant, className }) => {
   return (
