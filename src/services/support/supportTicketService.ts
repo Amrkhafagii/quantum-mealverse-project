@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { SupportTicket, CreateSupportTicketData } from '@/types/delivery-features';
 
@@ -36,10 +35,13 @@ export const supportTicketService = {
 
       if (error) throw error;
 
-      // Map database response to SupportTicket type
+      // Map database response to SupportTicket type with proper type casting
       const ticket: SupportTicket = {
         ...data,
         user_id: data.support_tickets_user_id, // Map database field to expected field
+        category: data.category as SupportTicket['category'], // Type cast
+        priority: data.priority as SupportTicket['priority'], // Type cast
+        status: data.status as SupportTicket['status'], // Type cast
         created_at: data.created_at || new Date().toISOString(),
         updated_at: data.updated_at || new Date().toISOString()
       };
@@ -61,10 +63,13 @@ export const supportTicketService = {
 
       if (error) throw error;
 
-      // Map database response to SupportTicket array
+      // Map database response to SupportTicket array with proper type casting
       return (data || []).map(item => ({
         ...item,
         user_id: item.support_tickets_user_id, // Map database field to expected field
+        category: item.category as SupportTicket['category'], // Type cast
+        priority: item.priority as SupportTicket['priority'], // Type cast
+        status: item.status as SupportTicket['status'], // Type cast
         created_at: item.created_at || new Date().toISOString(),
         updated_at: item.updated_at || new Date().toISOString()
       }));
@@ -84,10 +89,13 @@ export const supportTicketService = {
 
       if (error) throw error;
 
-      // Map database response to SupportTicket type
+      // Map database response to SupportTicket type with proper type casting
       const ticket: SupportTicket = {
         ...data,
         user_id: data.support_tickets_user_id, // Map database field to expected field
+        category: data.category as SupportTicket['category'], // Type cast
+        priority: data.priority as SupportTicket['priority'], // Type cast
+        status: data.status as SupportTicket['status'], // Type cast
         created_at: data.created_at || new Date().toISOString(),
         updated_at: data.updated_at || new Date().toISOString()
       };
@@ -195,10 +203,13 @@ export const supportTicketService = {
 
       if (error) throw error;
 
-      // Map database response to SupportTicket array
+      // Map database response to SupportTicket array with proper type casting
       return (data || []).map(item => ({
         ...item,
         user_id: item.support_tickets_user_id, // Map database field to expected field
+        category: item.category as SupportTicket['category'], // Type cast
+        priority: item.priority as SupportTicket['priority'], // Type cast
+        status: item.status as SupportTicket['status'], // Type cast
         created_at: item.created_at || new Date().toISOString(),
         updated_at: item.updated_at || new Date().toISOString()
       }));

@@ -1,3 +1,4 @@
+
 export interface SupportTicket {
   id: string;
   user_id: string; // Required field
@@ -26,4 +27,52 @@ export interface CreateSupportTicketData {
   order_id?: string;
   delivery_assignment_id?: string;
   attachments?: string[];
+}
+
+export interface CustomerCommunication {
+  id: string;
+  order_id: string;
+  sender_id: string;
+  recipient_id: string;
+  message_type: 'chat' | 'sms' | 'system';
+  content: string;
+  media_urls?: string[];
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
+}
+
+export interface DeliveryConfirmation {
+  id: string;
+  delivery_assignment_id: string;
+  confirmation_type: 'pickup' | 'delivery';
+  photo_urls: string[];
+  location_latitude?: number;
+  location_longitude?: number;
+  notes?: string;
+  confirmed_by: string;
+  confirmed_at: string;
+}
+
+export interface DeliveryRating {
+  id: string;
+  delivery_assignment_id: string;
+  order_id: string;
+  customer_id: string;
+  delivery_user_id: string;
+  rating: number;
+  comment?: string;
+  rating_categories: Record<string, number>;
+  created_at: string;
+}
+
+export interface OrderEvent {
+  id: string;
+  order_id: string;
+  event_type: string;
+  event_data: Record<string, any>;
+  user_id?: string;
+  delivery_user_id?: string;
+  restaurant_id?: string;
+  created_at: string;
 }
