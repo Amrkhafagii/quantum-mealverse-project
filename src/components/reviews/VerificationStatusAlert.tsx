@@ -1,4 +1,3 @@
-
 import React from "react";
 import { VerificationStatus } from "@/hooks/useEnhancedReviewSubmission";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -24,7 +23,7 @@ export const VerificationStatusAlert: React.FC<Props> = ({ verificationStatus })
   }
   if (verificationStatus.isVerified && !verificationStatus.canReview) {
     return (
-      <Alert variant="warning" className="mb-2">
+      <Alert variant="default" className="mb-2">
         <X className="h-5 w-5" />
         <AlertTitle>Too early</AlertTitle>
         <AlertDescription>
@@ -37,7 +36,7 @@ export const VerificationStatusAlert: React.FC<Props> = ({ verificationStatus })
   }
   if (verificationStatus.isVerified && verificationStatus.canReview) {
     return (
-      <Alert variant="success" className="mb-2">
+      <Alert variant="default" className="mb-2">
         <Check className="h-5 w-5" />
         <AlertTitle>Verified!</AlertTitle>
         <AlertDescription>
