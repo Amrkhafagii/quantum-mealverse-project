@@ -1,275 +1,326 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { DeliveryUser, DeliveryAvailability, DeliveryDocument, DeliveryPaymentDetails } from '@/types/delivery';
+import { DeliveryUser, DeliveryVehicle, DeliveryDocument, DeliveryPaymentDetails } from '@/types/delivery';
 
-/**
- * Create a new delivery user profile.
- */
-export const createDeliveryUser = async (userData: Partial<DeliveryUser>): Promise<DeliveryUser> => {
-  const now = new Date().toISOString();
-  const insertData: any = {
-    ...userData,
-    created_at: now,
-    updated_at: now,
-  };
+export const saveDeliveryUserInfo = async (
+  userData: Partial<DeliveryUser>
+): Promise<DeliveryUser> => {
+  try {
+    // Map TypeScript fields to database fields
+    const dbData = {
+      delivery_users_user_id: userData.delivery_users_user_id || '',
+      first_name: userData.first_name || '',
+      last_name: userData.last_name || '',
+      phone: userData.phone || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-  const { data, error } = await supabase
-    .from('delivery_users')
-    .insert(insertData)
-    .select('*')
-    .single();
+    const { data, error } = await supabase
+      .from('delivery_users')
+      .insert(dbData)
+      .select()
+      .single();
 
-  if (error || !data) throw new Error(error?.message || 'Unable to create delivery user');
+    if (error) throw error;
 
-  // Correctly map fields as per DeliveryUser interface, with fallback for optional fields
-  return {
-    id: String(data.id),
-    delivery_users_user_id: String(data.delivery_users_user_id),
-    full_name: data.full_name ?? [data.first_name, data.last_name].filter(Boolean).join(' '),
-    first_name: data.first_name,
-    last_name: data.last_name,
-    phone: data.phone ?? '',
-    vehicle_type: data.vehicle_type ?? '',
-    license_plate: data.license_plate ?? '',
-    driver_license_number: data.driver_license_number ?? '',
-    status: ['active', 'inactive', 'suspended', 'on_break'].includes(data.status) ? data.status : 'inactive',
-    rating: typeof data.rating === 'number'
-      ? data.rating
-      : typeof data.average_rating === 'number'
-      ? data.average_rating
-      : 0,
-    total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
-    verification_status: ['pending', 'verified', 'rejected'].includes(data.verification_status)
-      ? data.verification_status
-      : 'pending',
-    background_check_status: ['pending', 'approved', 'rejected'].includes(data.background_check_status)
-      ? data.background_check_status
-      : 'pending',
-    is_available: !!(data.is_available ?? false),
-    is_approved: !!(data.is_approved ?? false),
-    last_active: data.last_active ?? '',
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-  };
+    // Map database response to TypeScript type
+    const deliveryUser: DeliveryUser = {
+      id: data.id,
+      delivery_users_user_id: data.delivery_users_user_id,
+      full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: data.phone,
+      vehicle_type: '', // Not in DB, set default
+      license_plate: '', // Not in DB, set default
+      driver_license_number: '', // Not in DB, set default
+      status: 'inactive' as const,
+      rating: data.average_rating || 0,
+      total_deliveries: data.total_deliveries || 0,
+      verification_status: 'pending' as const,
+      background_check_status: 'pending' as const,
+      is_available: false,
+      is_approved: data.is_approved || false,
+      last_active: data.updated_at,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return deliveryUser;
+  } catch (error) {
+    console.error('Error saving delivery user info:', error);
+    throw new Error('Failed to save delivery user information');
+  }
 };
 
-// Helper for type guards for DeliveryDocument
-const validDocTypes = [
-  "license",
-  "insurance",
-  "registration",
-  "background_check",
-  "profile_photo",
-  "drivers_license",
-  "vehicle_registration",
-  "identity",
-] as const;
-function isValidDocType(type: any): type is DeliveryDocument["document_type"] {
-  return validDocTypes.includes(type);
-}
-
-/**
- * Upload a delivery document file and record in the DB.
- */
-export const uploadDeliveryDocument = async (
+export const updateDeliveryUserInfo = async (
   userId: string,
+  userData: Partial<DeliveryUser>
+): Promise<DeliveryUser> => {
+  try {
+    // Map TypeScript fields to database fields
+    const dbData = {
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      phone: userData.phone,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('delivery_users')
+      .update(dbData)
+      .eq('delivery_users_user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Map database response to TypeScript type
+    const deliveryUser: DeliveryUser = {
+      id: data.id,
+      delivery_users_user_id: data.delivery_users_user_id,
+      full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: data.phone,
+      vehicle_type: '', // Not in DB, set default
+      license_plate: '', // Not in DB, set default
+      driver_license_number: '', // Not in DB, set default
+      status: 'inactive' as const,
+      rating: data.average_rating || 0,
+      total_deliveries: data.total_deliveries || 0,
+      verification_status: 'pending' as const,
+      background_check_status: 'pending' as const,
+      is_available: false,
+      is_approved: data.is_approved || false,
+      last_active: data.updated_at,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return deliveryUser;
+  } catch (error) {
+    console.error('Error updating delivery user info:', error);
+    throw new Error('Failed to update delivery user information');
+  }
+};
+
+// Valid document types according to the TypeScript interface
+const VALID_DOCUMENT_TYPES = [
+  'license',
+  'insurance', 
+  'registration',
+  'background_check',
+  'profile_photo',
+  'drivers_license',
+  'vehicle_registration',
+  'identity'
+] as const;
+
+export const uploadDeliveryDocument = async (
   file: File,
-  documentType: DeliveryDocument["document_type"],
-  expiryDate?: string,
+  documentType: string,
+  userId: string,
+  expiryDate?: Date,
   notes?: string
 ): Promise<DeliveryDocument> => {
-  const ext = file.name.split('.').pop();
-  const fileName = `${userId}/${documentType}_${Date.now()}.${ext}`;
-  const uploadResult = await supabase.storage
-    .from('delivery-documents')
-    .upload(fileName, file);
+  try {
+    // Validate document type
+    if (!VALID_DOCUMENT_TYPES.includes(documentType as any)) {
+      throw new Error(`Invalid document type: ${documentType}`);
+    }
 
-  if (uploadResult.error) throw new Error(uploadResult.error.message);
+    // Upload file to storage
+    const fileName = `${userId}/${documentType}_${Date.now()}_${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('delivery-documents')
+      .upload(fileName, file);
 
-  // Correctly retrieve public URL from .data.publicUrl
-  const { data: urlData } = supabase.storage
-    .from('delivery-documents')
-    .getPublicUrl(fileName);
+    if (uploadError) throw uploadError;
 
-  const publicUrl = urlData && 'publicUrl' in urlData ? urlData.publicUrl : '';
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('delivery-documents')
+      .getPublicUrl(fileName);
 
-  // Insert file record with correct DB field names
-  const { data, error } = await supabase
-    .from('delivery_documents')
-    .insert({
+    // Save document record
+    const dbData = {
       delivery_user_id: userId,
       document_type: documentType,
-      file_path: fileName,
-      // document_url in DB may not exist; only store file_path and use publicUrl in UI (optional)
-      expiry_date: expiryDate,
-      notes,
+      file_path: publicUrl,
+      expiry_date: expiryDate?.toISOString().split('T')[0],
+      notes: notes || null,
       verified: false,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .select('*')
-    .single();
-
-  if (error || !data) throw new Error(error?.message || 'Unable to save delivery document');
-
-  // Return value matches DeliveryDocument, for UI list display
-  return {
-    id: String(data.id),
-    delivery_documents_user_id: String(data.delivery_user_id),
-    document_type: data.document_type,
-    document_url: publicUrl,
-    verification_status: data.verified ? 'approved' : 'pending',
-    expiry_date: data.expiry_date || undefined,
-    notes: data.notes || undefined,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-  };
-};
-
-/**
- * Get all documents for a delivery user.
- */
-export const getDocumentsByDeliveryUserId = async (
-  userId: string
-): Promise<DeliveryDocument[]> => {
-  const { data, error } = await supabase
-    .from('delivery_documents')
-    .select('*')
-    .eq('delivery_user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw new Error(error.message);
-
-  return (data || []).map((doc) => {
-    const { data: urlData } = supabase.storage
-      .from('delivery-documents')
-      .getPublicUrl(doc.file_path || '');
-    const publicUrl = urlData && 'publicUrl' in urlData ? urlData.publicUrl : '';
-    return {
-      id: String(doc.id),
-      delivery_documents_user_id: String(doc.delivery_user_id),
-      document_type: doc.document_type,
-      document_url: publicUrl,
-      verification_status: doc.verified ? 'approved' : 'pending',
-      expiry_date: doc.expiry_date || undefined,
-      notes: doc.notes || undefined,
-      created_at: doc.created_at,
-      updated_at: doc.updated_at,
+      updated_at: new Date().toISOString(),
     };
-  });
+
+    const { data, error } = await supabase
+      .from('delivery_documents')
+      .insert(dbData)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Map to TypeScript type
+    const document: DeliveryDocument = {
+      id: data.id,
+      delivery_documents_user_id: data.delivery_user_id,
+      document_type: data.document_type as DeliveryDocument['document_type'],
+      document_url: data.file_path,
+      verification_status: data.verified ? 'approved' : 'pending',
+      expiry_date: data.expiry_date,
+      notes: data.notes,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return document;
+  } catch (error) {
+    console.error('Error uploading delivery document:', error);
+    throw new Error('Failed to upload document');
+  }
 };
 
-/**
- * Save weekly delivery availability (replaces all for user).
- */
-export const saveAvailability = async (
+export const getDeliveryDocuments = async (userId: string): Promise<DeliveryDocument[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('delivery_documents')
+      .select('*')
+      .eq('delivery_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Map and filter valid document types
+    const documents: DeliveryDocument[] = data
+      .filter(doc => VALID_DOCUMENT_TYPES.includes(doc.document_type as any))
+      .map(doc => ({
+        id: doc.id,
+        delivery_documents_user_id: doc.delivery_user_id,
+        document_type: doc.document_type as DeliveryDocument['document_type'],
+        document_url: doc.file_path,
+        verification_status: doc.verified ? 'approved' : 'pending',
+        expiry_date: doc.expiry_date,
+        notes: doc.notes,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at,
+      }));
+
+    return documents;
+  } catch (error) {
+    console.error('Error fetching delivery documents:', error);
+    throw new Error('Failed to fetch documents');
+  }
+};
+
+export const saveDeliveryAvailability = async (
   userId: string,
-  availabilities: Array<Omit<DeliveryAvailability, 'id' | 'delivery_user_id' | 'created_at' | 'updated_at'>>
-): Promise<DeliveryAvailability[]> => {
-  // Remove all old entries for this user
-  const { error: delError } = await supabase
-    .from('delivery_availability')
-    .delete()
-    .eq('delivery_user_id', userId);
-  if (delError) throw new Error(delError.message);
+  scheduleData: any
+): Promise<void> => {
+  try {
+    // Clear existing schedules
+    await supabase
+      .from('delivery_availability')
+      .delete()
+      .eq('delivery_user_id', userId);
 
-  const now = new Date().toISOString();
-  const insertRows = availabilities.map(a => ({
-    ...a,
-    delivery_user_id: userId,
-    created_at: now,
-    updated_at: now,
-  }));
+    // Insert new schedules
+    const scheduleRecords = scheduleData.map((schedule: any) => ({
+      delivery_user_id: userId,
+      day_of_week: schedule.dayOfWeek,
+      start_time: schedule.startTime,
+      end_time: schedule.endTime,
+      is_recurring: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
 
-  const { data, error } = await supabase
-    .from('delivery_availability')
-    .insert(insertRows)
-    .select();
+    const { error } = await supabase
+      .from('delivery_availability')
+      .insert(scheduleRecords);
 
-  if (error) throw new Error(error.message);
-
-  return (data || []) as DeliveryAvailability[];
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error saving delivery availability:', error);
+    throw new Error('Failed to save availability schedule');
+  }
 };
 
-/**
- * Get all availability schedules for a user.
- */
-export const getAvailabilityByDeliveryUserId = async (
-  userId: string
-): Promise<DeliveryAvailability[]> => {
-  const { data, error } = await supabase
-    .from('delivery_availability')
-    .select('*')
-    .eq('delivery_user_id', userId)
-    .order('day_of_week', { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data || []) as DeliveryAvailability[];
-};
-
-/**
- * Save/update delivery user payment details (upsert, one row per user).
- */
-export const savePaymentDetails = async (
-  userId: string,
-  paymentDetails: Omit<DeliveryPaymentDetails, 'id' | 'delivery_payment_details_user_id' | 'created_at' | 'updated_at'>
+export const saveDeliveryPaymentDetails = async (
+  paymentData: Partial<DeliveryPaymentDetails>
 ): Promise<DeliveryPaymentDetails> => {
-  const now = new Date().toISOString();
-  const upsertData = {
-    delivery_payment_details_user_id: userId,
-    bank_name: paymentDetails.bank_name,
-    account_number: paymentDetails.account_number,
-    routing_number: paymentDetails.routing_number,
-    account_holder_name: paymentDetails.account_holder_name,
-    account_type: paymentDetails.account_type,
-    is_verified: !!paymentDetails.is_verified,
-    created_at: now,
-    updated_at: now
-  };
+  try {
+    // Map TypeScript fields to database fields for insert
+    const dbData = {
+      delivery_user_id: paymentData.delivery_payment_details_user_id || '',
+      account_name: paymentData.account_holder_name || '',
+      bank_name: paymentData.bank_name || '',
+      account_number: paymentData.account_number || '',
+      routing_number: paymentData.routing_number || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-  const { data, error } = await supabase
-    .from('delivery_payment_details')
-    .upsert(upsertData, { onConflict: 'delivery_payment_details_user_id' })
-    .select('*')
-    .single();
+    const { data, error } = await supabase
+      .from('delivery_payment_details')
+      .insert(dbData)
+      .select()
+      .single();
 
-  if (error || !data) throw new Error(error?.message || 'Unable to save payment details');
-  return {
-    id: String(data.id),
-    delivery_payment_details_user_id: String(data.delivery_payment_details_user_id),
-    bank_name: data.bank_name,
-    account_number: data.account_number,
-    routing_number: data.routing_number,
-    account_holder_name: data.account_holder_name,
-    account_type: data.account_type,
-    is_verified: data.is_verified,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-  };
+    if (error) throw error;
+
+    // Map database response back to TypeScript type
+    const paymentDetails: DeliveryPaymentDetails = {
+      id: data.id,
+      delivery_payment_details_user_id: data.delivery_user_id,
+      bank_name: data.bank_name,
+      account_number: data.account_number,
+      routing_number: data.routing_number,
+      account_holder_name: data.account_name,
+      account_type: 'checking' as const, // Default since not in DB
+      is_verified: false, // Default since not in DB
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return paymentDetails;
+  } catch (error) {
+    console.error('Error saving payment details:', error);
+    throw new Error('Failed to save payment details');
+  }
 };
 
-/**
- * Get delivery payment details for a user.
- */
-export const getPaymentDetailsByDeliveryUserId = async (
-  userId: string
-): Promise<DeliveryPaymentDetails | null> => {
-  const { data, error } = await supabase
-    .from('delivery_payment_details')
-    .select('*')
-    .eq('delivery_payment_details_user_id', userId)
-    .maybeSingle();
+export const getDeliveryPaymentDetails = async (userId: string): Promise<DeliveryPaymentDetails | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('delivery_payment_details')
+      .select('*')
+      .eq('delivery_user_id', userId)
+      .maybeSingle();
 
-  if (error) throw new Error(error.message);
-  if (!data) return null;
-  return {
-    id: String(data.id),
-    delivery_payment_details_user_id: String(data.delivery_payment_details_user_id),
-    bank_name: data.bank_name,
-    account_number: data.account_number,
-    routing_number: data.routing_number,
-    account_holder_name: data.account_holder_name,
-    account_type: data.account_type,
-    is_verified: data.is_verified,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-  };
+    if (error) throw error;
+    if (!data) return null;
+
+    // Map database response to TypeScript type
+    const paymentDetails: DeliveryPaymentDetails = {
+      id: data.id,
+      delivery_payment_details_user_id: data.delivery_user_id,
+      bank_name: data.bank_name,
+      account_number: data.account_number,
+      routing_number: data.routing_number,
+      account_holder_name: data.account_name,
+      account_type: 'checking' as const, // Default since not in DB
+      is_verified: false, // Default since not in DB
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return paymentDetails;
+  } catch (error) {
+    console.error('Error fetching payment details:', error);
+    return null;
+  }
 };
