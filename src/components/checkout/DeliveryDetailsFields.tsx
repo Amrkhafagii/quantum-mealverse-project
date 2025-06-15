@@ -1,13 +1,6 @@
 
 import React from 'react';
-import {
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { TextField, TextareaField } from '@/components/forms/FormField';
 import { UseFormReturn } from 'react-hook-form';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 
@@ -20,95 +13,52 @@ export const DeliveryDetailsFields: React.FC<DeliveryDetailsFieldsProps> = ({ fo
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
+        <TextField
           name="fullName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Full Name <span className="text-red-500">*</span></FormLabel>
-              <FormControl>
-                <Input placeholder="Enter your full name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Full Name"
+          placeholder="Enter your full name"
+          required
         />
         
-        <FormField
-          control={form.control}
+        <TextField
           name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
-              <FormControl>
-                <Input placeholder="Enter your phone number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          type="tel"
+          label="Phone Number"
+          placeholder="Enter your phone number"
+          required
         />
       </div>
 
       {/* Only show email field when there's no defaultEmail */}
       {!defaultEmail && (
-        <FormField
-          control={form.control}
+        <TextField
           name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Enter your email" 
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          type="email"
+          label="Email"
+          placeholder="Enter your email"
+          required
         />
       )}
 
-      <FormField
-        control={form.control}
+      <TextField
         name="address"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Delivery Address <span className="text-red-500">*</span></FormLabel>
-            <FormControl>
-              <Input placeholder="Enter your delivery address" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+        label="Delivery Address"
+        placeholder="Enter your delivery address"
+        required
       />
       
-      <FormField
-        control={form.control}
+      <TextField
         name="city"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>City <span className="text-red-500">*</span></FormLabel>
-            <FormControl>
-              <Input placeholder="Enter your city" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+        label="City"
+        placeholder="Enter your city"
+        required
       />
       
-      <FormField
-        control={form.control}
+      <TextareaField
         name="notes"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Notes (Optional)</FormLabel>
-            <FormControl>
-              <Input placeholder="Any special instructions?" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+        label="Notes (Optional)"
+        placeholder="Any special instructions?"
+        rows={2}
       />
     </>
   );

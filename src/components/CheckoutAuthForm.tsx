@@ -1,19 +1,10 @@
 
 import React from 'react';
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { z } from 'zod';
+import { BaseForm } from '@/components/forms/BaseForm';
+import { TextField } from '@/components/forms/FormField';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const authFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -29,62 +20,48 @@ interface CheckoutAuthFormProps {
 }
 
 export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: CheckoutAuthFormProps) => {
-  const form = useForm<AuthFormValues>({
-    resolver: zodResolver(authFormSchema),
-    defaultValues: {
-      email: email || "",
-      password: "",
-    },
-    mode: "onChange"
-  });
+  const defaultValues = {
+    email: email || "",
+    password: "",
+  };
 
   return (
     <Card className="holographic-card p-6 mb-6">
       <h2 className="text-xl font-bold text-quantum-cyan mb-4">Account Information</h2>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                {!email && <FormLabel>Email <span className="text-red-500">*</span></FormLabel>}
-                <FormControl>
-                  <Input 
-                    placeholder="Enter your email" 
-                    {...field} 
-                    readOnly={!!email}
-                    className={email ? "bg-gray-100" : ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+      
+      <BaseForm
+        schema={authFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={onSubmit}
+        className="space-y-4"
+        mode="onChange"
+      >
+        <TextField
+          name="email"
+          type="email"
+          label={!email ? "Email" : undefined}
+          placeholder="Enter your email"
+          required
+          disabled={!!email}
+          className={email ? "bg-gray-100" : ""}
+        />
+        
+        {showPassword && (
+          <TextField
+            name="password"
+            type="password"
+            label="Password"
+            placeholder="Create a password"
+            required
           />
-          
-          {showPassword && (
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password <span className="text-red-500">*</span></FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Create a password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-          
-          {showPassword && (
-            <Button type="submit" className="cyber-button w-full">
-              Create Account
-            </Button>
-          )}
-        </form>
-      </Form>
+        )}
+        
+        {showPassword && (
+          <Button type="submit" className="cyber-button w-full">
+            Create Account
+          </Button>
+        )}
+      </BaseForm>
     </Card>
   );
 };
