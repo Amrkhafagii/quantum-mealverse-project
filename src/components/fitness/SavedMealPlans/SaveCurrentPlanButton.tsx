@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { TDEEResult } from '@/services/mealPlan/types';
+import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { MealPlan } from '@/types/food';
 import { saveMealPlan } from '@/services/mealPlan';
 

@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Droplets, Utensils } from 'lucide-react';
-import { TDEEResult } from '@/services/mealPlan/types';
+import { TDEEResult } from './TDEECalculator';
 import { MealPlan } from '@/types/food';
 import MealCardGrid from './nutrition/MealCardGrid';
 import { shuffleMeal } from '@/services/mealPlan/mealCreationService';

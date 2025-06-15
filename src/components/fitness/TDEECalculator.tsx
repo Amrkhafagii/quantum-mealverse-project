@@ -1,193 +1,453 @@
-// Add a simple TDEE calculation function at the top of the file
-function calculateTDEE(
-  weight: number,
-  height: number,
-  age: number,
-  gender: 'male' | 'female',
-  activityLevel: number
-) {
-  // Harris-Benedict Equation as a fallback
-  let bmr = gender === 'male'
-    ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
-    : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
-
-  const tdee = bmr * activityLevel;
-  return { bmr, tdee };
-}
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { CheckCheck, User2 } from 'lucide-react';
-import { TDEEResult } from '@/services/mealPlan/types';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface TDEECalculatorProps {
-  onGenerateMealPlan: (result: TDEEResult) => void;
+export interface TDEEResult {
+  tdee: number;
+  bmr: number;
+  adjustedCalories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatsGrams: number;
+  goal: string;
+  weight?: number;
+  activityLevel?: string;
+  formulaUsed: 'standard' | 'hybrid';
 }
 
-const TDEECalculator: React.FC<TDEECalculatorProps> = ({ onGenerateMealPlan }) => {
-  const [weight, setWeight] = useState<number>(70); // Weight in kg
-  const [height, setHeight] = useState<number>(175); // Height in cm
-  const [age, setAge] = useState<number>(30);
-  const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [activityLevel, setActivityLevel] = useState<number>(1.55); // Moderate activity
-  const [goal, setGoal] = useState<'cut' | 'maintain' | 'bulk'>('maintain');
+const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (result: TDEEResult) => void }) => {
   const { toast } = useToast();
+  const [units, setUnits] = useState<'metric' | 'imperial'>('metric');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [age, setAge] = useState<string>('');
+  const [weight, setWeight] = useState<string>('');
+  const [height, setHeight] = useState<string>('');
+  const [bodyFat, setBodyFat] = useState<string>('');
+  const [activityLevel, setActivityLevel] = useState<string>('1.2');
+  const [goal, setGoal] = useState<'maintain' | 'cut' | 'bulk'>('maintain');
+  const [result, setResult] = useState<TDEEResult | null>(null);
 
-  // Activity level descriptions
-  const activityLevels = {
-    1.2: 'Sedentary (little to no exercise)',
-    1.375: 'Lightly Active (light exercise/sports 1-3 days/week)',
-    1.55: 'Moderately Active (moderate exercise/sports 3-5 days/week)',
-    1.725: 'Very Active (hard exercise/sports 6-7 days a week)',
-    1.9: 'Extremely Active (very hard exercise/sports & physical job or 2x training)'
+  const activityLevels = [
+    { value: '1.2', label: 'Sedentary (office job, little to no exercise)' },
+    { value: '1.375', label: 'Light Activity (light exercise 1-3 days/week)' },
+    { value: '1.55', label: 'Moderate Activity (moderate exercise 3-5 days/week)' },
+    { value: '1.725', label: 'Very Active (hard exercise 6-7 days/week)' },
+    { value: '1.9', label: 'Extremely Active (physical job + training 2x/day)' },
+  ];
+
+  const convertToMetric = () => {
+    // Convert imperial to metric if needed
+    const weightKg = units === 'imperial' ? parseFloat(weight) * 0.453592 : parseFloat(weight);
+    const heightCm = units === 'imperial' ? parseFloat(height) * 2.54 : parseFloat(height);
+    return { weightKg, heightCm };
   };
 
-  useEffect(() => {
-    // Store default values in session storage on mount
-    sessionStorage.setItem('weight', weight.toString());
-    sessionStorage.setItem('height', height.toString());
-    sessionStorage.setItem('age', age.toString());
-    sessionStorage.setItem('gender', gender);
-    sessionStorage.setItem('activityLevel', activityLevel.toString());
-    sessionStorage.setItem('goal', goal);
-  }, []);
+  const validateBodyFat = (bf: string): number | null => {
+    const bfValue = parseFloat(bf);
+    if (!bf || isNaN(bfValue)) {
+      return null;
+    }
+    
+    // Body fat percentage should be between 3% and 50%
+    if (bfValue < 3 || bfValue > 50) {
+      toast({
+        title: "Invalid Body Fat Percentage",
+        description: "Body fat should be between 3% and 50%",
+        variant: "destructive",
+      });
+      return null;
+    }
+    
+    // Convert percentage to decimal
+    return bfValue / 100;
+  };
 
-  const handleCalculate = () => {
-    // Simple TDEE calculation (you can use a more accurate formula)
-    const { bmr, tdee } = calculateTDEE(weight, height, age, gender, activityLevel);
+  const calculateBMR = (weightKg: number, heightCm: number, ageNum: number, isMale: boolean, bodyFatPercentage: number | null): { bmr: number, formulaUsed: 'standard' | 'hybrid' } => {
+    // Sex constant: 5 for male, -161 for female
+    const sexConstant = isMale ? 5 : -161;
+    
+    // Standard Harris-Benedict formula
+    const standardBMR = 10 * weightKg + 6.25 * heightCm - 5 * ageNum + sexConstant;
+    
+    // If body fat percentage is available, use the hybrid formula
+    if (bodyFatPercentage !== null) {
+      // Calculate lean body mass
+      const lbm = weightKg * (1 - bodyFatPercentage);
+      const lbmLbs = lbm * 2.20462; // Convert to lbs
+      
+      // Hybrid formula: [(Standard formula) + (14 × LBM in lbs)] / 2
+      const hybridBMR = (standardBMR + (14 * lbmLbs)) / 2;
+      
+      return { bmr: hybridBMR, formulaUsed: 'hybrid' };
+    }
+    
+    // Return standard BMR if no body fat data
+    return { bmr: standardBMR, formulaUsed: 'standard' };
+  };
+
+  const calculateTDEE = () => {
+    if (!age || !weight || !height || !activityLevel) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { weightKg, heightCm } = convertToMetric();
+    const ageNum = parseFloat(age);
+    const activityMultiplier = parseFloat(activityLevel);
+    
+    // Validate and parse body fat if available
+    const bodyFatPercentage = validateBodyFat(bodyFat);
+    
+    // Calculate BMR using potentially hybrid formula
+    const { bmr, formulaUsed } = calculateBMR(
+      weightKg, 
+      heightCm, 
+      ageNum, 
+      gender === 'male', 
+      bodyFatPercentage
+    );
+
+    // Calculate TDEE based on activity level
+    const tdee = bmr * activityMultiplier;
 
     // Adjust calories based on goal
     let adjustedCalories = tdee;
-    let proteinGrams = weight * 2; // 2g of protein per kg of body weight
-    let fatGrams = weight * 0.8; // 0.8g of fat per kg of body weight
-    let carbsGrams = 0;
-
-    switch (goal) {
-      case 'cut':
-        adjustedCalories = tdee * 0.85; // 15% deficit
-        carbsGrams = (adjustedCalories - (proteinGrams * 4) - (fatGrams * 9)) / 4;
-        break;
-      case 'bulk':
-        adjustedCalories = tdee * 1.10; // 10% surplus
-        carbsGrams = (adjustedCalories - (proteinGrams * 4) - (fatGrams * 9)) / 4;
-        break;
-      default:
-        adjustedCalories = tdee;
-        carbsGrams = (adjustedCalories - (proteinGrams * 4) - (fatGrams * 9)) / 4;
-        break;
+    if (goal === 'bulk') {
+      adjustedCalories = tdee * 1.1; // +10% for bulking
+    } else if (goal === 'cut') {
+      adjustedCalories = tdee * 0.8; // -20% for cutting
     }
 
-    // Ensure carbs are not negative
-    carbsGrams = Math.max(0, carbsGrams);
+    // Calculate macros (30/35/35 split)
+    const proteinCalories = adjustedCalories * 0.3;
+    const carbsCalories = adjustedCalories * 0.35;
+    const fatsCalories = adjustedCalories * 0.35;
 
-    const result: TDEEResult = {
-      bmr: Math.round(bmr),
+    // Convert to grams
+    const proteinGrams = Math.round(proteinCalories / 4); // 4 calories per gram of protein
+    const carbsGrams = Math.round(carbsCalories / 4); // 4 calories per gram of carbs
+    const fatsGrams = Math.round(fatsCalories / 9); // 9 calories per gram of fat
+
+    const resultData: TDEEResult = {
       tdee: Math.round(tdee),
+      bmr: Math.round(bmr),
       adjustedCalories: Math.round(adjustedCalories),
-      proteinGrams: Math.round(proteinGrams),
-      carbsGrams: Math.round(carbsGrams),
-      fatsGrams: Math.round(fatGrams),
-      goal: goal
+      proteinGrams,
+      carbsGrams,
+      fatsGrams,
+      goal,
+      weight: weightKg,
+      activityLevel: getActivityLevelLabel(activityMultiplier),
+      formulaUsed
     };
 
-    // Store calculation result in session storage
-    sessionStorage.setItem('currentTDEE', JSON.stringify(result));
+    setResult(resultData);
+    
+    if (onCalculationComplete) {
+      onCalculationComplete(resultData);
+    }
 
-    // Pass the result to the parent component
-    onGenerateMealPlan(result);
+    const formulaMessage = formulaUsed === 'hybrid' 
+      ? "using enhanced formula with lean body mass" 
+      : "using standard formula";
 
     toast({
-      title: "Calculation complete!",
-      description: "Your TDEE and macronutrient targets have been calculated.",
-    })
+      title: "Calculation Complete",
+      description: `Your personalized TDEE and macros have been calculated ${formulaMessage}.`,
+    });
+  };
+
+  const getActivityLevelLabel = (value: number): string => {
+    const level = activityLevels.find(level => parseFloat(level.value) === value);
+    return level ? level.label.split(' ')[0].toLowerCase() : 'moderately-active';
+  };
+
+  const waterIntake = () => {
+    const { weightKg } = convertToMetric();
+    return Math.round(weightKg * 35); // 35ml per kg
   };
 
   return (
-    <Card className="w-full bg-quantum-darkBlue/30 border-quantum-cyan/20">
+    <Card className="holographic-card">
       <CardHeader>
-        <CardTitle className="text-quantum-cyan flex items-center gap-2">
-          <User2 className="h-5 w-5" />
-          TDEE Calculator
-        </CardTitle>
-        <CardDescription className="text-gray-400">
-          Calculate your Total Daily Energy Expenditure (TDEE) to estimate your daily calorie needs.
+        <CardTitle className="text-quantum-cyan">TDEE & Macro Calculator</CardTitle>
+        <CardDescription>
+          Calculate your daily energy requirements and optimal macronutrient distribution
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="weight">Weight (kg)</Label>
-          <Input
-            type="number"
-            id="weight"
-            value={weight}
-            onChange={(e) => setWeight(Number(e.target.value))}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="height">Height (cm)</Label>
-          <Input
-            type="number"
-            id="height"
-            value={height}
-            onChange={(e) => setHeight(Number(e.target.value))}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="age">Age</Label>
-          <Input
-            type="number"
-            id="age"
-            value={age}
-            onChange={(e) => setAge(Number(e.target.value))}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="gender">Gender</Label>
-          <Select value={gender} onValueChange={value => setGender(value as 'male' | 'female')}>
-            <SelectTrigger id="gender">
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="activityLevel">Activity Level</Label>
-          <Slider
-            id="activityLevel"
-            defaultValue={[activityLevel]}
-            max={1.9}
-            min={1.2}
-            step={0.025}
-            onValueChange={(value) => setActivityLevel(value[0])}
-          />
-          <p className="text-sm text-gray-500">{activityLevels[activityLevel as keyof typeof activityLevels]}</p>
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="goal">Goal</Label>
-          <Select value={goal} onValueChange={value => setGoal(value as 'cut' | 'maintain' | 'bulk')}>
-            <SelectTrigger id="goal">
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="cut">Cut (lose weight)</SelectItem>
-              <SelectItem value="maintain">Maintain</SelectItem>
-              <SelectItem value="bulk">Bulk (gain weight)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button onClick={handleCalculate} className="bg-quantum-purple hover:bg-quantum-purple/90">
-          Calculate & Generate Meal Plan
-          <CheckCheck className="ml-2 h-4 w-4" />
-        </Button>
+      <CardContent>
+        <Tabs defaultValue="calculator">
+          <TabsList className="mb-4">
+            <TabsTrigger value="calculator">Calculator</TabsTrigger>
+            <TabsTrigger value="results" disabled={!result}>Results</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="calculator" className="space-y-4">
+            <div className="mb-4">
+              <TabsList className="mb-2 w-full">
+                <TabsTrigger 
+                  value="metric" 
+                  className="w-1/2" 
+                  onClick={() => setUnits('metric')}
+                  data-state={units === 'metric' ? 'active' : ''}
+                >
+                  Metric
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="imperial" 
+                  className="w-1/2" 
+                  onClick={() => setUnits('imperial')}
+                  data-state={units === 'imperial' ? 'active' : ''}
+                >
+                  Imperial
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Select
+                  value={gender}
+                  onValueChange={(value: 'male' | 'female') => setGender(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="age">Age (years)</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  min="18"
+                  max="100"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="weight">
+                  Weight ({units === 'metric' ? 'kg' : 'lbs'})
+                </Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  min="40"
+                  max={units === 'metric' ? '200' : '440'}
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="height">
+                  Height ({units === 'metric' ? 'cm' : 'in'})
+                </Label>
+                <Input
+                  id="height"
+                  type="number"
+                  min={units === 'metric' ? '140' : '55'}
+                  max={units === 'metric' ? '220' : '87'}
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bodyFat" className="flex items-center">
+                  Body Fat % 
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="ml-1 cursor-help">
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Adding your body fat % enables our enhanced formula that accounts for lean body mass, providing more accurate results especially for athletic builds.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <span className="text-xs text-muted-foreground">Optional but recommended</span>
+              </div>
+              <Input
+                id="bodyFat"
+                type="number"
+                min="3"
+                max="50"
+                value={bodyFat}
+                onChange={(e) => setBodyFat(e.target.value)}
+                placeholder="Enter if known (3-50%)"
+                className={bodyFat ? "border-quantum-cyan" : ""}
+              />
+              {bodyFat && (
+                <p className="text-xs text-quantum-cyan">Enhanced formula will be used</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="activityLevel">Activity Level</Label>
+              <Select 
+                value={activityLevel} 
+                onValueChange={(value) => setActivityLevel(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select activity level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activityLevels.map((level) => (
+                    <SelectItem key={level.value} value={level.value}>
+                      {level.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="goal">Goal</Label>
+              <Select 
+                value={goal} 
+                onValueChange={(value: 'maintain' | 'cut' | 'bulk') => setGoal(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your goal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="maintain">Maintain Weight</SelectItem>
+                  <SelectItem value="cut">Cut (Lose Weight)</SelectItem>
+                  <SelectItem value="bulk">Bulk (Gain Weight)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button 
+              onClick={calculateTDEE} 
+              className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
+            >
+              Calculate
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="results">
+            {result && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 mb-4">
+                  <div className="bg-quantum-darkBlue/30 p-4 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-sm text-gray-400">Formula Used</div>
+                        <div className="text-lg font-bold text-quantum-purple">
+                          {result.formulaUsed === 'hybrid' ? 
+                            'Enhanced (Lean Body Mass)' : 
+                            'Standard (Harris-Benedict)'}
+                        </div>
+                      </div>
+                      {result.formulaUsed === 'hybrid' ? (
+                        <span className="bg-quantum-purple/30 text-quantum-purple text-xs px-2 py-1 rounded-full">
+                          More Accurate
+                        </span>
+                      ) : (
+                        <span className="bg-quantum-cyan/30 text-quantum-cyan text-xs px-2 py-1 rounded-full">
+                          Standard
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-quantum-darkBlue/30 p-4 rounded-lg">
+                    <div className="text-sm text-gray-400">BMR</div>
+                    <div className="text-2xl font-bold text-quantum-cyan">{result.bmr} kcal</div>
+                  </div>
+                  <div className="bg-quantum-darkBlue/30 p-4 rounded-lg">
+                    <div className="text-sm text-gray-400">TDEE</div>
+                    <div className="text-2xl font-bold text-quantum-cyan">{result.tdee} kcal</div>
+                  </div>
+                </div>
+
+                <div className="bg-quantum-darkBlue/30 p-4 rounded-lg">
+                  <div className="text-sm text-gray-400">
+                    {result.goal === 'maintain' ? 'Maintenance Calories' : 
+                     result.goal === 'cut' ? 'Cutting Calories (-20%)' : 
+                     'Bulking Calories (+10%)'}
+                  </div>
+                  <div className="text-3xl font-bold text-quantum-purple">
+                    {result.adjustedCalories} kcal
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Recommended Macros (30/35/35)</h3>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-blue-900/30 p-3 rounded-lg text-center">
+                      <div className="text-blue-400 font-medium">Protein</div>
+                      <div className="text-xl font-bold">{result.proteinGrams}g</div>
+                      <div className="text-sm text-gray-400">{Math.round(result.proteinGrams * 4)} kcal</div>
+                    </div>
+                    
+                    <div className="bg-green-900/30 p-3 rounded-lg text-center">
+                      <div className="text-green-400 font-medium">Carbs</div>
+                      <div className="text-xl font-bold">{result.carbsGrams}g</div>
+                      <div className="text-sm text-gray-400">{Math.round(result.carbsGrams * 4)} kcal</div>
+                    </div>
+                    
+                    <div className="bg-yellow-900/30 p-3 rounded-lg text-center">
+                      <div className="text-yellow-400 font-medium">Fats</div>
+                      <div className="text-xl font-bold">{result.fatsGrams}g</div>
+                      <div className="text-sm text-gray-400">{Math.round(result.fatsGrams * 9)} kcal</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-900/30 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-base font-medium text-blue-400">
+                        Daily Water Intake
+                      </div>
+                      <div className="text-2xl font-bold">{waterIntake()} ml</div>
+                    </div>
+                    <div className="text-3xl">💧</div>
+                  </div>
+                </div>
+
+                <div>
+                  <Button 
+                    className="w-full bg-quantum-purple hover:bg-quantum-purple/90"
+                    onClick={() => document.getElementById('meal-plan-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  >
+                    Generate Meal Plan
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
