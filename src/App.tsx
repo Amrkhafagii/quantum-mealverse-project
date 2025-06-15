@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +20,7 @@ import RestaurantDashboard from "./pages/restaurant/Dashboard";
 import RestaurantOrders from "./pages/restaurant/Orders";
 import RestaurantMenu from "./pages/restaurant/Menu";
 import RestaurantSettings from "./pages/restaurant/Settings";
+import RestaurantFinancials from "./pages/restaurant/Financials";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
@@ -120,6 +120,11 @@ function App() {
                       <Route path="/restaurant/menu" element={
                         <ProtectedRoute allowedUserTypes={['restaurant']}>
                           <RestaurantMenu />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/restaurant/financials" element={
+                        <ProtectedRoute allowedUserTypes={['restaurant']}>
+                          <RestaurantFinancials />
                         </ProtectedRoute>
                       } />
                       <Route path="/restaurant/settings" element={
