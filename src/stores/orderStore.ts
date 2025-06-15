@@ -86,7 +86,8 @@ export const useOrderStore = create<OrderState>()(
       })),
 
       getDraft: (draftId) => {
-        return get().orderDrafts.find(d => d.id === draftId) || null;
+        const state = get();
+        return state.orderDrafts.find(d => d.id === draftId) || null;
       },
 
       addRecentOrder: (order) => set((state) => ({
