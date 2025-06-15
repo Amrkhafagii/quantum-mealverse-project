@@ -10327,6 +10327,10 @@ export type Database = {
         Args: { p_delivery_user_id: string; p_date: string }
         Returns: undefined
       }
+      calculate_delivery_distance: {
+        Args: { lat1: number; lng1: number; lat2: number; lng2: number }
+        Returns: number
+      }
       calculate_delivery_eta: {
         Args: {
           p_delivery_assignment_id: string
