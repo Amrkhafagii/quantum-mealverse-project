@@ -6,6 +6,7 @@ import { MapPin, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LocationPermissionHelp } from "./LocationPermissionHelp";
 import { Input } from "@/components/ui/input";
+import { useGeolocationPermissionStatus } from "@/hooks/useGeolocationPermissionStatus";
 
 interface LocationSectionProps {
   onLocationUpdate: (location: { latitude: number; longitude: number }) => void;
@@ -26,6 +27,15 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
   const [manualMode, setManualMode] = useState(false);
   const { toast } = useToast();
 
+  // Use our new hook for permission status (real-time)
+  const {
+    permissionStatus: browserPermissionStatus,
+    refreshPermission,
+  } = useGeolocationPermissionStatus();
+
+  // Track if we've asked for location (used to switch UI)
+  const [hasRequested, setHasRequested] = useState(false);
+
   // Use a more efficient useEffect implementation
   useEffect(() => {
     if (location && locationIsValid() && !isGettingLocation) {
@@ -33,12 +43,20 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
     }
   }, [location, locationIsValid, onLocationUpdate, isGettingLocation]);
 
+  // New: Decide what to consider as denied
+  const permissionReallyDenied =
+    browserPermissionStatus === "denied" ||
+    permissionStatus === "denied" ||
+    (hasRequested && permissionStatus !== "granted" && browserPermissionStatus !== "granted");
+
   // Memoize handler to prevent unnecessary rerenders
   const handleGetLocation = useCallback(async () => {
     if (isGettingLocation) return;
 
     setIsGettingLocation(true);
     setManualMode(false);
+    setHasRequested(true); // Mark that user wanted location
+
     try {
       const newLocation = await getCurrentLocation();
       if (newLocation && newLocation.latitude && newLocation.longitude) {
@@ -50,8 +68,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
       } else {
         toast({
           title: "Location error",
-          description:
-            (locationError ?? "Could not get valid location coordinates. Please try again."),
+          description: (locationError ?? "Could not get valid location coordinates. Please try again."),
           variant: "destructive",
         });
       }
@@ -59,14 +76,16 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
       console.error("Location error:", error);
       toast({
         title: "Location error",
-        description:
-          (locationError ?? (error?.message || "We couldn't get your location. Please try again.")),
+        description: (locationError ?? (error?.message || "We couldn't get your location. Please try again.")),
         variant: "destructive",
       });
     } finally {
       setIsGettingLocation(false);
+
+      // After requesting, refresh permission in UI
+      refreshPermission();
     }
-  }, [getCurrentLocation, onLocationUpdate, toast, isGettingLocation, locationError]);
+  }, [getCurrentLocation, onLocationUpdate, toast, isGettingLocation, locationError, refreshPermission]);
 
   // Handle using manual address
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -125,7 +144,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
               )}
             </Button>
           )}
-          {(permissionStatus === "denied" || locationError) && (
+          {(permissionReallyDenied || locationError) && (
             <Button
               type="button"
               variant="outline"
@@ -148,22 +167,34 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
               Cancel Manual Entry
             </Button>
           )}
+          {/* Show refresh button if denied for recovery */}
+          {permissionReallyDenied && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="ml-2"
+              size="sm"
+              onClick={refreshPermission}
+            >
+              Refresh Permission Status
+            </Button>
+          )}
         </div>
       </div>
       
-      {permissionStatus === "denied" && (
+      {permissionReallyDenied && (
         <>
           <Alert variant="destructive" className="border-red-500 bg-red-500/10">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="font-medium">
-              Location access denied. Please enable location services in your browser settings.
+              Location access denied. Please enable location services in your browser settings, then click "Refresh Permission Status".
             </AlertDescription>
           </Alert>
           <LocationPermissionHelp error={locationError} />
         </>
       )}
 
-      {locationError && permissionStatus !== "denied" && (
+      {locationError && !permissionReallyDenied && (
         <>
           <Alert variant="destructive" className="border-red-500 bg-red-500/10">
             <AlertCircle className="h-4 w-4" />
@@ -207,7 +238,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
           )}
         </div>
       ) : (
-        required && !manualMode && !locationError ? (
+        required && !manualMode && !locationError && !permissionReallyDenied ? (
           <Alert variant="destructive" className="border-red-500 bg-red-500/10">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="font-medium">
