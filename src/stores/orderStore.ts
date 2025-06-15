@@ -68,7 +68,7 @@ export const useOrderStore = create<OrderState>()(
 
       setCurrentOrder: (order) => set({ currentOrder: order }),
 
-      saveDraft: (draft) => set((state) => {
+      saveDraft: (draft) => set((state: OrderState) => {
         const existingIndex = state.orderDrafts.findIndex(d => d.id === draft.id);
         const updatedDraft = { ...draft, updatedAt: new Date().toISOString() };
         
@@ -81,16 +81,16 @@ export const useOrderStore = create<OrderState>()(
         }
       }),
 
-      removeDraft: (draftId) => set((state) => ({
+      removeDraft: (draftId) => set((state: OrderState) => ({
         orderDrafts: state.orderDrafts.filter(d => d.id !== draftId)
       })),
 
       getDraft: (draftId) => {
-        const state = get();
+        const state = get() as OrderState;
         return state.orderDrafts.find(d => d.id === draftId) || null;
       },
 
-      addRecentOrder: (order) => set((state) => ({
+      addRecentOrder: (order) => set((state: OrderState) => ({
         recentOrders: [order, ...state.recentOrders.slice(0, 9)] // Keep last 10
       })),
 
