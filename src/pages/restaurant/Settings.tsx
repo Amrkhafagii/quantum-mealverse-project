@@ -2,7 +2,9 @@
 import React from 'react';
 import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
 import RestaurantSettings from '@/components/restaurant/profile/RestaurantSettings';
+import { OrderFixPanel } from '@/components/admin/OrderFixPanel';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const RestaurantSettingsPage = () => {
   const { restaurant, isLoading } = useRestaurantAuth();
@@ -20,7 +22,22 @@ const RestaurantSettingsPage = () => {
 
   return (
     <RestaurantLayout>
-      <RestaurantSettings restaurant={restaurant} />
+      <div className="container mx-auto p-6">
+        <Tabs defaultValue="settings" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="fix-orders">Fix Orders</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="settings" className="mt-6">
+            <RestaurantSettings restaurant={restaurant} />
+          </TabsContent>
+          
+          <TabsContent value="fix-orders" className="mt-6">
+            <OrderFixPanel />
+          </TabsContent>
+        </Tabs>
+      </div>
     </RestaurantLayout>
   );
 };

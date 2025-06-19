@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export async function findNearestRestaurants(
@@ -23,17 +22,28 @@ export async function findNearestRestaurants(
     }
 
     console.log('Found restaurants:', data?.length || 0);
+    console.log('Raw restaurant data:', JSON.stringify(data, null, 2));
     
-    // Map the response to the expected format
-    return (data || []).map((restaurant: any) => ({
-      restaurant_id: restaurant.restaurant_id,
-      restaurant_name: restaurant.restaurant_name,
-      restaurant_address: restaurant.restaurant_address,
-      restaurant_email: restaurant.restaurant_email,
-      distance_km: restaurant.distance_km,
-      latitude: restaurant.restaurant_latitude,
-      longitude: restaurant.restaurant_longitude
-    }));
+    // Fix the data mapping - ensure restaurant_id is properly extracted
+    return (data || []).map((restaurant: any) => {
+      console.log('Mapping restaurant:', restaurant);
+      
+      // Validate that we have a valid restaurant_id
+      if (!restaurant.restaurant_id) {
+        console.error('Restaurant missing ID:', restaurant);
+        return null;
+      }
+      
+      return {
+        restaurant_id: restaurant.restaurant_id,
+        restaurant_name: restaurant.restaurant_name,
+        restaurant_address: restaurant.restaurant_address,
+        restaurant_email: restaurant.restaurant_email,
+        distance_km: restaurant.distance_km,
+        latitude: restaurant.restaurant_latitude,
+        longitude: restaurant.restaurant_longitude
+      };
+    }).filter(Boolean); // Remove any null entries
   } catch (e) {
     console.error('Unexpected error in findNearestRestaurants:', e);
     return [];
@@ -47,6 +57,12 @@ export async function createRestaurantAssignment(
   expiresAt: string
 ) {
   console.log(`Creating restaurant assignment for order ${orderId} to restaurant ${restaurantId}`);
+
+  // Add validation to prevent NULL restaurant_id
+  if (!restaurantId || restaurantId === 'null' || restaurantId === 'undefined') {
+    console.error('Invalid restaurant_id provided:', restaurantId);
+    return null;
+  }
 
   try {
     const { data, error } = await supabase
