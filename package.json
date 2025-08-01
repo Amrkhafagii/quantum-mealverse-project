@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
-    "build:web": "expo export --platform web",
+    "build:web": "expo export --platform web", 
+    "build:dev": "expo export --platform web --dev",
     "knip": "knip --production --fix --allow-remove-files",
     "lint": "expo lint"
   },
