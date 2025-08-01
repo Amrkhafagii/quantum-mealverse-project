@@ -1,6 +1,0 @@
-{
-    "entry": ["src/index.ts"],
-    "ignoreExportsUsedInFile": true,
-    "ignore": ["**/*.test.ts", "**/*.spec.ts", "dist/**", "node_modules/**"]
-}
-  
