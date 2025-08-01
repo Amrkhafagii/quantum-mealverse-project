@@ -386,6 +386,36 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_rate_limits: {
+        Row: {
+          attempt_type: string
+          attempts: number | null
+          blocked_until: string | null
+          first_attempt: string | null
+          id: string
+          identifier: string
+          last_attempt: string | null
+        }
+        Insert: {
+          attempt_type: string
+          attempts?: number | null
+          blocked_until?: string | null
+          first_attempt?: string | null
+          id?: string
+          identifier: string
+          last_attempt?: string | null
+        }
+        Update: {
+          attempt_type?: string
+          attempts?: number | null
+          blocked_until?: string | null
+          first_attempt?: string | null
+          id?: string
+          identifier?: string
+          last_attempt?: string | null
+        }
+        Relationships: []
+      }
       body_composition: {
         Row: {
           bmr_calories: number | null
@@ -3215,6 +3245,36 @@ export type Database = {
           },
         ]
       }
+      security_audit_log: {
+        Row: {
+          created_at: string | null
+          event_details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       session_exercises: {
         Row: {
           created_at: string | null
@@ -5080,6 +5140,16 @@ export type Database = {
         Args: { p_workout_session_id: string }
         Returns: undefined
       }
+      check_rate_limit: {
+        Args: {
+          p_identifier: string
+          p_attempt_type: string
+          p_max_attempts?: number
+          p_window_minutes?: number
+          p_block_minutes?: number
+        }
+        Returns: boolean
+      }
       cleanup_expired_backups: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -5108,9 +5178,23 @@ export type Database = {
           created_at: string
         }[]
       }
+      get_user_email_safe: {
+        Args: { user_uuid: string }
+        Returns: string
+      }
       join_challenge: {
         Args: { p_user_id: string; p_challenge_id: string }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          p_user_id: string
+          p_event_type: string
+          p_event_details?: Json
+          p_ip_address?: string
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       refresh_analytics_caches: {
         Args: Record<PropertyKey, never>
@@ -5155,6 +5239,10 @@ export type Database = {
       update_workout_streak: {
         Args: { user_uuid: string }
         Returns: undefined
+      }
+      validate_password_strength: {
+        Args: { password: string }
+        Returns: boolean
       }
       validate_workout_data: {
         Args: Record<PropertyKey, never>

@@ -23,8 +23,16 @@ export default function SignInScreen() {
   const { signIn } = useAuth();
 
   const handleSignIn = async () => {
+    // Input validation
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
@@ -32,12 +40,22 @@ export default function SignInScreen() {
     try {
       const { error } = await signIn(email, password);
       if (error) {
-        Alert.alert('Error', error.message);
+        // Provide user-friendly error messages
+        let errorMessage = error.message;
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Please verify your email address before signing in.';
+        } else if (error.message.includes('rate limit')) {
+          errorMessage = 'Too many sign-in attempts. Please wait a few minutes before trying again.';
+        }
+        Alert.alert('Sign In Failed', errorMessage);
       } else {
         router.replace('/(tabs)');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      console.error('Sign-in error:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }

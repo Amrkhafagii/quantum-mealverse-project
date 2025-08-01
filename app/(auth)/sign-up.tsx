@@ -26,7 +26,24 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
 
+  const validatePasswordStrength = (password: string): string | null => {
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters long';
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'Password must contain at least one number';
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    return null;
+  };
+
   const handleSignUp = async () => {
+    // Input validation
     if (!email || !password || !username) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -37,8 +54,17 @@ export default function SignUpScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    // Enhanced password validation
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      Alert.alert('Weak Password', passwordError);
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
@@ -46,16 +72,26 @@ export default function SignUpScreen() {
     try {
       const { error } = await signUp(email, password, username, fullName);
       if (error) {
-        Alert.alert('Error', error.message);
+        // Provide user-friendly error messages
+        let errorMessage = error.message;
+        if (error.message.includes('already registered')) {
+          errorMessage = 'An account with this email already exists. Please sign in instead.';
+        } else if (error.message.includes('password')) {
+          errorMessage = 'Password does not meet security requirements. Please choose a stronger password.';
+        } else if (error.message.includes('email')) {
+          errorMessage = 'Please provide a valid email address.';
+        }
+        Alert.alert('Registration Failed', errorMessage);
       } else {
         Alert.alert(
-          'Success',
-          'Account created successfully! Please check your email to verify your account.',
+          'Account Created!',
+          'Please check your email to verify your account before signing in.',
           [{ text: 'OK', onPress: () => router.replace('/(auth)/sign-in') }]
         );
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      console.error('Sign-up error:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }
