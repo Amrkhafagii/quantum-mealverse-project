@@ -83,7 +83,7 @@ export default function StreakDisplay({ streak, loading }: StreakDisplayProps) {
         <View style={styles.statItem}>
           <Calendar size={16} color="#fff" />
           <Text style={styles.statLabel}>Last Workout</Text>
-          <Text style={styles.statValue}>{formatDate(streak.last_workout_date)}</Text>
+          <Text style={styles.statValue}>{formatDate(streak.last_workout_date ?? null)}</Text>
         </View>
       </View>
     </LinearGradient>

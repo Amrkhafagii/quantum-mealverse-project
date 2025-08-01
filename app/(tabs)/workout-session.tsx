@@ -92,8 +92,8 @@ export default function WorkoutSessionScreen() {
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
-  const [currentAchievement, setCurrentAchievement] = useState(null);
-  const [currentRecord, setCurrentRecord] = useState(null);
+  const [currentAchievement, setCurrentAchievement] = useState<any>(null);
+  const [currentRecord, setCurrentRecord] = useState<any>(null);
   const [sessionStats, setSessionStats] = useState<SessionStats>({
     totalSets: 0,
     completedSets: 0,
@@ -107,7 +107,7 @@ export default function WorkoutSessionScreen() {
 
   // Timer effect for session duration
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isSessionActive && sessionStartTime) {
       interval = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - sessionStartTime.getTime()) / 1000));
@@ -118,7 +118,7 @@ export default function WorkoutSessionScreen() {
 
   // Rest timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isResting && restTimer > 0) {
       interval = setInterval(() => {
         setRestTimer((prev) => {
@@ -338,7 +338,7 @@ export default function WorkoutSessionScreen() {
         ...updatedSets[setIndex],
         reps,
         weight_kg: weight,
-        duration_seconds: duration,
+        duration_seconds: duration ?? null,
         rpe,
         completed: true,
       };
