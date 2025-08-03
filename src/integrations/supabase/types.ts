@@ -4668,6 +4668,7 @@ export type Database = {
           target_weight_kg: number | null
           template_id: string | null
           updated_at: string | null
+          workout_id: number | null
           workout_session_id: string | null
         }
         Insert: {
@@ -4684,6 +4685,7 @@ export type Database = {
           target_weight_kg?: number | null
           template_id?: string | null
           updated_at?: string | null
+          workout_id?: number | null
           workout_session_id?: string | null
         }
         Update: {
@@ -4700,6 +4702,7 @@ export type Database = {
           target_weight_kg?: number | null
           template_id?: string | null
           updated_at?: string | null
+          workout_id?: number | null
           workout_session_id?: string | null
         }
         Relationships: [
@@ -4722,6 +4725,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "workout_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_exercises_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
             referencedColumns: ["id"]
           },
           {
