@@ -252,11 +252,22 @@ const getExercisesByMuscleGroup = async (muscleGroup: string): Promise<Exercise[
 
 // Workout functions
 export const getWorkoutTemplates = async (): Promise<Workout[]> => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error('Error getting current user for templates:', userError);
+    return [];
+  }
+  if (!user) {
+    console.warn('No authenticated user; returning empty workout templates.');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('workouts')
     .select('*')
     .eq('is_template', true)
-    .eq('is_public', true)
+    .eq('creator_id', user.id)
     .order('name');
   
   if (error) {
