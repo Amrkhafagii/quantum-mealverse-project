@@ -143,20 +143,6 @@ export type Database = {
             referencedRelation: "achievements"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "achievement_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "achievement_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       achievement_progress: {
@@ -200,20 +186,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "achievement_definitions"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "achievement_progress_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "achievement_progress_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -325,36 +297,7 @@ export type Database = {
           target_type?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "activity_feed_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "activity_feed_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "activity_feed_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "activity_feed_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       anonymous_backups: {
         Row: {
@@ -462,22 +405,7 @@ export type Database = {
           visceral_fat_level?: number | null
           water_percentage?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "body_composition_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "body_composition_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       body_measurements: {
         Row: {
@@ -549,22 +477,7 @@ export type Database = {
           waist?: number | null
           weight?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "body_measurements_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "body_measurements_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       challenge_categories: {
         Row: {
@@ -679,20 +592,6 @@ export type Database = {
             referencedRelation: "challenges"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "challenge_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "challenge_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       challenge_participants: {
@@ -748,20 +647,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "community_challenges"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenge_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "challenge_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -895,22 +780,7 @@ export type Database = {
           updated_at?: string | null
           usage_count?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "challenge_templates_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "challenge_templates_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       challenges: {
         Row: {
@@ -993,20 +863,6 @@ export type Database = {
             referencedRelation: "challenge_categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "challenges_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "challenges_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       comment_likes: {
@@ -1035,20 +891,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "post_comments"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_likes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "comment_likes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1119,22 +961,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "community_challenges_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "community_challenges_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       conflict_resolution: {
         Row: {
@@ -1188,36 +1015,7 @@ export type Database = {
           status?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "conflict_resolution_resolved_by_fkey"
-            columns: ["resolved_by"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "conflict_resolution_resolved_by_fkey"
-            columns: ["resolved_by"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "conflict_resolution_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "conflict_resolution_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       device_profiles: {
         Row: {
@@ -1331,36 +1129,7 @@ export type Database = {
           user_id?: string | null
           version_number?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "entity_versions_last_modified_by_fkey"
-            columns: ["last_modified_by"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "entity_versions_last_modified_by_fkey"
-            columns: ["last_modified_by"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "entity_versions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "entity_versions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       exercise_analytics: {
         Row: {
@@ -1446,20 +1215,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "exercises"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exercise_analytics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "exercise_analytics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1621,20 +1376,6 @@ export type Database = {
             referencedRelation: "exercise_categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "exercises_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "exercises_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       friendships: {
@@ -1671,11 +1412,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "user_progress_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "friendships_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "user_progress_summary"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1785,22 +1540,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "goal_tracking_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "goal_tracking_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       leaderboard_entries: {
         Row: {
@@ -1858,20 +1598,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "leaderboards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leaderboard_entries_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "leaderboard_entries_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1992,20 +1718,6 @@ export type Database = {
             referencedRelation: "measurement_types"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "measurement_goals_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "measurement_goals_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       measurement_photos: {
@@ -2051,22 +1763,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "measurement_photos_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "measurement_photos_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       measurement_types: {
         Row: {
@@ -2156,22 +1853,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "media_cache_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "media_cache_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       milestones: {
         Row: {
@@ -2213,22 +1895,7 @@ export type Database = {
           user_id?: string
           value?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "milestones_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "milestones_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       nutrition_logs: {
         Row: {
@@ -2285,22 +1952,7 @@ export type Database = {
           unit?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "nutrition_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "nutrition_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       offline_sessions: {
         Row: {
@@ -2348,22 +2000,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "offline_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "offline_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       performance_metrics: {
         Row: {
@@ -2408,22 +2045,7 @@ export type Database = {
           trend_direction?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "performance_metrics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "performance_metrics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       performance_trends: {
         Row: {
@@ -2477,22 +2099,7 @@ export type Database = {
           trend_strength?: number | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "performance_trends_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "performance_trends_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       personal_records: {
         Row: {
@@ -2578,20 +2185,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "personal_records_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "personal_records_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "personal_records_workout_session_id_fkey"
             columns: ["workout_session_id"]
             isOneToOne: false
@@ -2637,22 +2230,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "photo_albums_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "photo_albums_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       photo_analytics: {
         Row: {
@@ -2698,20 +2276,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "progress_photos"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "photo_analytics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "photo_analytics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -2776,20 +2340,6 @@ export type Database = {
             referencedRelation: "progress_photos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "photo_comparisons_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "photo_comparisons_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       photo_shares: {
@@ -2844,20 +2394,6 @@ export type Database = {
             referencedRelation: "progress_photos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "photo_shares_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "photo_shares_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       photo_tags: {
@@ -2888,22 +2424,7 @@ export type Database = {
           usage_count?: number | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "photo_tags_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "photo_tags_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       post_comments: {
         Row: {
@@ -2963,20 +2484,6 @@ export type Database = {
             referencedRelation: "social_posts"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "post_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "post_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       post_likes: {
@@ -3008,20 +2515,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "social_posts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_likes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "post_likes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -3071,22 +2564,7 @@ export type Database = {
           username?: string
           weight_kg?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       progress_photos: {
         Row: {
@@ -3166,20 +2644,6 @@ export type Database = {
             referencedRelation: "photo_albums"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "progress_photos_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "progress_photos_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       recovery_metrics: {
@@ -3228,22 +2692,7 @@ export type Database = {
           stress_level?: number | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "recovery_metrics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "recovery_metrics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       security_audit_log: {
         Row: {
@@ -3354,22 +2803,7 @@ export type Database = {
           user_id?: string
           wake_time?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "sleep_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "sleep_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       social_activity_feed: {
         Row: {
@@ -3405,36 +2839,7 @@ export type Database = {
           object_type?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "social_activity_feed_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "social_activity_feed_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "social_activity_feed_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "social_activity_feed_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       social_notifications: {
         Row: {
@@ -3476,36 +2881,7 @@ export type Database = {
           title?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "social_notifications_from_user_id_fkey"
-            columns: ["from_user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "social_notifications_from_user_id_fkey"
-            columns: ["from_user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "social_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "social_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       social_posts: {
         Row: {
@@ -3580,20 +2956,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "social_posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "social_posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "social_posts_workout_session_id_fkey"
             columns: ["workout_session_id"]
             isOneToOne: false
@@ -3633,22 +2995,7 @@ export type Database = {
           streak_type?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "streak_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "streak_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       streaks: {
         Row: {
@@ -3690,22 +3037,7 @@ export type Database = {
           streak_type?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "streaks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "streaks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       sync_queue: {
         Row: {
@@ -3759,22 +3091,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "sync_queue_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "sync_queue_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       sync_status: {
         Row: {
@@ -3828,22 +3145,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "sync_status_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "sync_status_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       team_challenges: {
         Row: {
@@ -3899,20 +3201,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "team_challenges_captain_id_fkey"
-            columns: ["captain_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "team_challenges_captain_id_fkey"
-            columns: ["captain_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "team_challenges_challenge_id_fkey"
             columns: ["challenge_id"]
             isOneToOne: false
@@ -3966,20 +3254,6 @@ export type Database = {
             referencedRelation: "team_challenges"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "team_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "team_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       user_achievement_stats: {
@@ -4019,22 +3293,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_achievement_stats_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_achievement_stats_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_achievements: {
         Row: {
@@ -4081,6 +3340,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_progress_summary"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -4145,22 +3411,7 @@ export type Database = {
           weekly_stats?: Json | null
           yearly_stats?: Json | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_analytics_cache_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_analytics_cache_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_follows: {
         Row: {
@@ -4184,36 +3435,7 @@ export type Database = {
           id?: string
           status?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_follows_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_follows_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_follows_following_id_fkey"
-            columns: ["following_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_follows_following_id_fkey"
-            columns: ["following_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_measurements: {
         Row: {
@@ -4263,20 +3485,6 @@ export type Database = {
             referencedRelation: "measurement_types"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "user_measurements_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_measurements_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       user_privacy_settings: {
@@ -4322,22 +3530,7 @@ export type Database = {
           user_id?: string
           workout_visibility?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_privacy_settings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_privacy_settings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_profiles: {
         Row: {
@@ -4421,22 +3614,7 @@ export type Database = {
           username?: string | null
           website?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_relationships: {
         Row: {
@@ -4466,36 +3644,7 @@ export type Database = {
           status?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_relationships_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_relationships_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_relationships_following_id_fkey"
-            columns: ["following_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_relationships_following_id_fkey"
-            columns: ["following_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_rewards: {
         Row: {
@@ -4554,20 +3703,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "challenge_rewards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_rewards_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_rewards_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -4630,20 +3765,6 @@ export type Database = {
           workout_session_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "workout_analytics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "workout_analytics_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "workout_analytics_workout_session_id_fkey"
             columns: ["workout_session_id"]
@@ -4812,20 +3933,6 @@ export type Database = {
             referencedRelation: "workout_templates"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "workout_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "workout_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       workout_shares: {
@@ -4873,20 +3980,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "workout_shares_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "workout_shares_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "workout_shares_workout_session_id_fkey"
             columns: ["workout_session_id"]
             isOneToOne: false
@@ -4931,6 +4024,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "workout_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_progress_summary"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       workout_templates: {
@@ -4973,22 +4073,7 @@ export type Database = {
           usage_count?: number | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "workout_templates_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "workout_templates_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_summary"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       workouts: {
         Row: {
@@ -5038,53 +4123,17 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-        ]
-      }
-    }
-    Views: {
-      challenge_leaderboards: {
-        Row: {
-          challenge_id: string | null
-          challenge_status: string | null
-          challenge_title: string | null
-          challenge_type: string | null
-          completed_at: string | null
-          completion_percentage: number | null
-          current_progress: number | null
-          difficulty: string | null
-          end_date: string | null
-          is_completed: boolean | null
-          joined_at: string | null
-          rank_position: number | null
-          reward_points: number | null
-          target_unit: string | null
-          target_value: number | null
-          user_id: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "challenge_participants_challenge_id_fkey"
-            columns: ["challenge_id"]
-            isOneToOne: false
-            referencedRelation: "community_challenges"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenge_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "exercise_performance_trends"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "challenge_participants_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "workouts_creator_id_fkey"
+            columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "user_progress_summary"
             referencedColumns: ["user_id"]
           },
         ]
       }
+    }
+    Views: {
       database_health_summary: {
         Row: {
           completed_records: number | null
@@ -5096,31 +4145,25 @@ export type Database = {
       }
       exercise_performance_trends: {
         Row: {
+          active_users: number | null
           avg_reps: number | null
           avg_weight: number | null
           exercise_id: string | null
           exercise_name: string | null
-          first_performed: string | null
-          last_performed: string | null
-          max_weight: number | null
-          progression_rate_per_day: number | null
-          total_reps: number | null
-          total_sets: number | null
-          user_id: string | null
-          workout_count: number | null
+          total_volume: number | null
+          week_start: string | null
         }
         Relationships: []
       }
       user_progress_summary: {
         Row: {
-          avg_workout_duration: number | null
-          first_workout_date: string | null
+          days_since_last_workout: number | null
           last_workout_date: string | null
-          total_reps: number | null
-          total_volume_kg: number | null
+          total_volume: number | null
           total_workouts: number | null
           unique_exercises: number | null
           user_id: string | null
+          username: string | null
         }
         Relationships: []
       }
@@ -5149,6 +4192,10 @@ export type Database = {
       calculate_workout_analytics: {
         Args: { p_workout_session_id: string }
         Returns: undefined
+      }
+      check_auth_rate_limit: {
+        Args: { p_identifier: string; p_attempt_type?: string }
+        Returns: boolean
       }
       check_rate_limit: {
         Args: {
@@ -5214,6 +4261,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      secure_sign_in: {
+        Args: { p_email: string; p_password: string; p_ip_address?: string }
+        Returns: Json
+      }
       update_challenge_rankings: {
         Args: { p_challenge_id: string }
         Returns: undefined
@@ -5252,6 +4303,10 @@ export type Database = {
       }
       validate_password_strength: {
         Args: { password: string }
+        Returns: boolean
+      }
+      validate_social_post_content: {
+        Args: { content: string }
         Returns: boolean
       }
       validate_workout_data: {
